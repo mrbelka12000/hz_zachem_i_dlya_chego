@@ -11,6 +11,8 @@ interface LayoutProps {
 const navItems = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/transactions', label: 'Transactions' },
+  { to: '/accounts', label: 'Accounts' },
+  { to: '/categories', label: 'Categories' },
 ] as const
 
 export function Layout({ children }: LayoutProps) {

@@ -11,6 +11,12 @@ import { TransactionsList } from './pages/Transactions/List'
 import { NewTransaction } from './pages/Transactions/New'
 import { EditTransaction } from './pages/Transactions/Edit'
 import { CreateTransfer } from './pages/Transactions/Transfer'
+import { AccountsList } from './pages/Accounts/List'
+import { NewAccount } from './pages/Accounts/New'
+import { EditAccount } from './pages/Accounts/Edit'
+import { CategoriesList } from './pages/Categories/List'
+import { NewCategory } from './pages/Categories/New'
+import { EditCategory } from './pages/Categories/Edit'
 
 function Protected({ children }: { children: ReactNode }) {
   return (
@@ -64,6 +70,54 @@ export default function App() {
             element={
               <Protected>
                 <EditTransaction />
+              </Protected>
+            }
+          />
+          <Route
+            path="/accounts"
+            element={
+              <Protected>
+                <AccountsList />
+              </Protected>
+            }
+          />
+          <Route
+            path="/accounts/new"
+            element={
+              <Protected>
+                <NewAccount />
+              </Protected>
+            }
+          />
+          <Route
+            path="/accounts/:id/edit"
+            element={
+              <Protected>
+                <EditAccount />
+              </Protected>
+            }
+          />
+          <Route
+            path="/categories"
+            element={
+              <Protected>
+                <CategoriesList />
+              </Protected>
+            }
+          />
+          <Route
+            path="/categories/new"
+            element={
+              <Protected>
+                <NewCategory />
+              </Protected>
+            }
+          />
+          <Route
+            path="/categories/:id/edit"
+            element={
+              <Protected>
+                <EditCategory />
               </Protected>
             }
           />
