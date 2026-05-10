@@ -12,6 +12,7 @@ import type {
 } from '../api/types'
 import { currentMonthRange, formatDate, formatMonth } from '../lib/dates'
 import { formatMoney, sumMoney } from '../lib/money'
+import { amountClassName, amountPrefix } from '../lib/transactions'
 
 export function Dashboard() {
   const range = useMemo(currentMonthRange, [])
@@ -234,13 +235,8 @@ function RecentList({ rows }: { rows: Transaction[] }) {
               {formatDate(t.occurred_at)} · {t.type}
             </p>
           </div>
-          <span
-            className={
-              'font-medium tabular-nums ' +
-              (t.type === 'expense' ? 'text-red-600' : 'text-green-700')
-            }
-          >
-            {t.type === 'expense' ? '−' : '+'}
+          <span className={'font-medium tabular-nums ' + amountClassName(t)}>
+            {amountPrefix(t)}
             {formatMoney(t.amount, t.currency)}
           </span>
         </li>

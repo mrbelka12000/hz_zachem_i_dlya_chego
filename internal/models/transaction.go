@@ -25,6 +25,7 @@ type Transaction struct {
 	ExternalHash         *string           `json:"external_hash,omitempty"`
 	RawPayload           json.RawMessage   `gorm:"type:jsonb" json:"raw_payload,omitempty"`
 	TransferID           *ID               `gorm:"type:uuid;index" json:"transfer_id,omitempty"`
+	TransferDirection    *TransferDirection `gorm:"type:text" json:"transfer_direction,omitempty"`
 	IdempotencyKey       *string           `json:"idempotency_key,omitempty"`
 	CreatedBy            ID                `gorm:"type:uuid;not null" json:"created_by"`
 	UpdatedBy            *ID               `gorm:"type:uuid" json:"updated_by,omitempty"`

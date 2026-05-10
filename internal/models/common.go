@@ -74,6 +74,13 @@ const (
 	CategorySourceSystem CategorySource = "system"
 )
 
+type TransferDirection string
+
+const (
+	TransferDirectionOut TransferDirection = "out" // money leaving this account (expense leg)
+	TransferDirectionIn  TransferDirection = "in"  // money arriving in this account (income leg)
+)
+
 type Role string
 
 const (

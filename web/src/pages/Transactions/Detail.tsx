@@ -7,6 +7,7 @@ import { transactionsApi } from '../../api/transactions'
 import type { Account, Category, ID, Transaction } from '../../api/types'
 import { formatDateTime } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
+import { amountClassName, amountPrefix } from '../../lib/transactions'
 
 export function TransactionDetail() {
   const { id = '' } = useParams<{ id: string }>()
@@ -71,12 +72,9 @@ export function TransactionDetail() {
         <div className="flex items-baseline justify-between">
           <p className="text-xs uppercase tracking-wide text-slate-500">{t.type}</p>
           <p
-            className={
-              'text-2xl font-semibold tabular-nums ' +
-              (t.type === 'expense' ? 'text-red-600' : 'text-green-700')
-            }
+            className={'text-2xl font-semibold tabular-nums ' + amountClassName(t)}
           >
-            {t.type === 'expense' ? '−' : '+'}
+            {amountPrefix(t)}
             {formatMoney(t.amount, t.currency)}
           </p>
         </div>
@@ -157,13 +155,8 @@ function CounterpartCard({
       </header>
       <div className="flex items-baseline justify-between">
         <p className="text-xs uppercase tracking-wide text-slate-500">{t.type}</p>
-        <p
-          className={
-            'text-lg font-semibold tabular-nums ' +
-            (t.type === 'expense' ? 'text-red-600' : 'text-green-700')
-          }
-        >
-          {t.type === 'expense' ? '−' : '+'}
+        <p className={'text-lg font-semibold tabular-nums ' + amountClassName(t)}>
+          {amountPrefix(t)}
           {formatMoney(t.amount, t.currency)}
         </p>
       </div>

@@ -151,27 +151,31 @@ func (s *TransactionService) CreateTransfer(ctx context.Context, in CreateTransf
 		return nil, nil, ErrCurrencyMismatch
 	}
 	desc := strings.TrimSpace(in.Description)
+	out := models.TransferDirectionOut
+	inDir := models.TransferDirectionIn
 	expense := &models.Transaction{
-		HouseholdID: in.HouseholdID,
-		AccountID:   in.FromAccountID,
-		Type:        models.TransactionTypeTransfer,
-		Amount:      in.Amount,
-		Currency:    from.Currency,
-		OccurredAt:  in.OccurredAt,
-		Description: desc,
-		Source:      models.TransactionSourceManual,
-		CreatedBy:   in.CreatedBy,
+		HouseholdID:       in.HouseholdID,
+		AccountID:         in.FromAccountID,
+		Type:              models.TransactionTypeTransfer,
+		TransferDirection: &out,
+		Amount:            in.Amount,
+		Currency:          from.Currency,
+		OccurredAt:        in.OccurredAt,
+		Description:       desc,
+		Source:            models.TransactionSourceManual,
+		CreatedBy:         in.CreatedBy,
 	}
 	income := &models.Transaction{
-		HouseholdID: in.HouseholdID,
-		AccountID:   in.ToAccountID,
-		Type:        models.TransactionTypeTransfer,
-		Amount:      in.Amount,
-		Currency:    to.Currency,
-		OccurredAt:  in.OccurredAt,
-		Description: desc,
-		Source:      models.TransactionSourceManual,
-		CreatedBy:   in.CreatedBy,
+		HouseholdID:       in.HouseholdID,
+		AccountID:         in.ToAccountID,
+		Type:              models.TransactionTypeTransfer,
+		TransferDirection: &inDir,
+		Amount:            in.Amount,
+		Currency:          to.Currency,
+		OccurredAt:        in.OccurredAt,
+		Description:       desc,
+		Source:            models.TransactionSourceManual,
+		CreatedBy:         in.CreatedBy,
 	}
 	if err := s.repo.Transactions.CreateTransfer(ctx, expense, income); err != nil {
 		return nil, nil, err

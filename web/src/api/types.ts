@@ -70,6 +70,7 @@ export interface Transaction {
   external_hash?: string | null
   raw_payload?: Record<string, unknown> | null
   transfer_id?: ID | null
+  transfer_direction?: 'out' | 'in' | null
   idempotency_key?: string | null
   created_by: ID
   updated_by?: ID | null

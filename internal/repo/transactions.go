@@ -102,22 +102,37 @@ func (r *TransactionRepo) ListUnpairedExpenseAndIncome(ctx context.Context, hous
 // PairAsTransfer atomically converts one expense + one income row
 // (already validated by the caller) into a paired transfer leg. Both
 // rows must belong to the household and currently have transfer_id IS NULL.
+//
+// The two rows are updated separately so each leg can record its own
+// direction: 'out' on the original expense, 'in' on the original income.
 func (r *TransactionRepo) PairAsTransfer(ctx context.Context, householdID, expenseID, incomeID, transferID models.ID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		updates := map[string]any{
-			"type":            models.TransactionTypeTransfer,
-			"transfer_id":     transferID,
-			"category_id":     nil,
-			"category_source": models.CategorySourceNone,
-			"updated_at":      gorm.Expr("NOW()"),
+		commonUpdates := func(direction models.TransferDirection) map[string]any {
+			return map[string]any{
+				"type":               models.TransactionTypeTransfer,
+				"transfer_id":        transferID,
+				"transfer_direction": direction,
+				"category_id":        nil,
+				"category_source":    models.CategorySourceNone,
+				"updated_at":         gorm.Expr("NOW()"),
+			}
 		}
-		res := tx.Model(&models.Transaction{}).
-			Where("household_id = ? AND id IN ? AND transfer_id IS NULL", householdID, []models.ID{expenseID, incomeID}).
-			Updates(updates)
-		if res.Error != nil {
-			return mapErr(res.Error)
+		outRes := tx.Model(&models.Transaction{}).
+			Where("household_id = ? AND id = ? AND transfer_id IS NULL", householdID, expenseID).
+			Updates(commonUpdates(models.TransferDirectionOut))
+		if outRes.Error != nil {
+			return mapErr(outRes.Error)
 		}
-		if res.RowsAffected != 2 {
+		if outRes.RowsAffected != 1 {
+			return ErrConflict
+		}
+		inRes := tx.Model(&models.Transaction{}).
+			Where("household_id = ? AND id = ? AND transfer_id IS NULL", householdID, incomeID).
+			Updates(commonUpdates(models.TransferDirectionIn))
+		if inRes.Error != nil {
+			return mapErr(inRes.Error)
+		}
+		if inRes.RowsAffected != 1 {
 			return ErrConflict
 		}
 		return nil

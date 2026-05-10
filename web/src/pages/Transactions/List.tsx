@@ -14,6 +14,7 @@ import type {
 } from '../../api/types'
 import { formatDate } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
+import { amountClassName, amountPrefix } from '../../lib/transactions'
 
 interface FilterState {
   type: TransactionType | ''
@@ -280,10 +281,10 @@ export function TransactionsList() {
                   <td
                     className={
                       'px-4 py-2 text-right font-medium tabular-nums ' +
-                      (t.type === 'expense' ? 'text-red-600' : 'text-green-700')
+                      amountClassName(t)
                     }
                   >
-                    {t.type === 'expense' ? '−' : '+'}
+                    {amountPrefix(t)}
                     {formatMoney(t.amount, t.currency)}
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
