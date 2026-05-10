@@ -24,6 +24,12 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # web/web.go has //go:embed all:dist; web/dist/ is gitignored and
+      # only populated by `make web-build`. Lint just needs the embed
+      # pattern to resolve, so a stub file is enough.
+      - name: Stub web/dist for embed
+        run: mkdir -p web/dist && echo "<!doctype html>" > web/dist/index.html
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
@@ -40,6 +46,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - name: Stub web/dist for embed
+        run: mkdir -p web/dist && echo "<!doctype html>" > web/dist/index.html
 
       - name: Download dependencies
         run: go mod download
@@ -139,7 +148,7 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/hz_zachem:prod hz_zachem"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/hz_zachem:prod finance_service"
 
   deploy-dev:
     name: Deploy to Development
@@ -177,5 +186,5 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/hz_zachem hz_zachem"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/hz_zachem finance_service"
           

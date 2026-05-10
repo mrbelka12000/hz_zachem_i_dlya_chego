@@ -1,0 +1,19 @@
+.git
+.github
+.idea
+.vscode
+.claude
+
+bin
+coverage.*
+*.test
+*.out
+
+# Built locally; the Dockerfile rebuilds the SPA in its own stage.
+web/node_modules
+web/dist
+web/.vite
+
+# Local secrets and CSV exports — never end up in an image.
+.env
+*.csv
