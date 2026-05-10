@@ -46,7 +46,11 @@ func Run() {
 		log.Printf("connect to postgres: %v", err)
 		return
 	}
-	defer db.Close()
+	defer func() {
+		if sqlDB, err := db.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	}()
 	log.Println("connected to postgres")
 
 	rmq, err := rabbitmq.New(cfg.RabbitMQ)
@@ -58,11 +62,10 @@ func Run() {
 	log.Println("connected to rabbitmq")
 
 	repository := repo.New(db)
-	svc := service.New(repository)
+	svc := service.New(cfg.Auth, repository)
 	_ = producer.New(rmq, cfg.RabbitMQ.Queue)
 
-	// HTTP Server
-	router := v1.NewRouter(svc)
+	router := v1.NewRouter(svc, cfg)
 	srv := server.New(cfg.HTTP.Port, router.Init())
 
 	go func() {
@@ -84,11 +87,11 @@ func Run() {
 }
 
 func runMigrations(dsn string) error {
-	db, err := sql.Open("pgx", dsn)
+	sqlDB, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return fmt.Errorf("open postgres for migration: %w", err)
 	}
-	defer db.Close()
+	defer sqlDB.Close()
 
 	if err := goose.SetDialect("postgres"); err != nil {
 		return fmt.Errorf("set dialect postgres: %w", err)
@@ -96,7 +99,7 @@ func runMigrations(dsn string) error {
 
 	goose.SetBaseFS(migrations.FS)
 
-	if err := goose.Up(db, "."); err != nil {
+	if err := goose.Up(sqlDB, "."); err != nil {
 		return fmt.Errorf("run migrations: %w", err)
 	}
 

@@ -1,38 +1,44 @@
 package config
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
+	"github.com/joho/godotenv"
+	"github.com/sethvargo/go-envconfig"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	HTTP     HTTPConfig     `yaml:"http"`
-	RabbitMQ RabbitMQConfig `yaml:"rabbitmq"`
-	Postgres PostgresConfig `yaml:"postgres"`
-	Worker   WorkerConfig   `yaml:"worker"`
+	HTTP     HTTPConfig     `yaml:"http"     env:", prefix=HTTP_"`
+	RabbitMQ RabbitMQConfig `yaml:"rabbitmq" env:", prefix=RABBITMQ_"`
+	Postgres PostgresConfig `yaml:"postgres" env:", prefix=POSTGRES_"`
+	Worker   WorkerConfig   `yaml:"worker"   env:", prefix=WORKER_"`
+	Auth     AuthConfig     `yaml:"auth"     env:", prefix=AUTH_"`
+	CORS     CORSConfig     `yaml:"cors"     env:", prefix=CORS_"`
+	CSRF     CSRFConfig     `yaml:"csrf"     env:", prefix=CSRF_"`
 }
 
 type HTTPConfig struct {
-	Port string `yaml:"port"`
+	Port string `yaml:"port" env:"PORT, default=8080"`
 }
 
 type RabbitMQConfig struct {
-	URL      string `yaml:"url"`
-	Exchange string `yaml:"exchange"`
-	Queue    string `yaml:"queue"`
+	URL      string `yaml:"url"      env:"URL, required"`
+	Exchange string `yaml:"exchange" env:"EXCHANGE, required"`
+	Queue    string `yaml:"queue"    env:"QUEUE, required"`
 }
 
 type PostgresConfig struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	DBName   string `yaml:"dbname"`
-	SSLMode  string `yaml:"sslmode"`
+	Host     string `yaml:"host"     env:"HOST, required"`
+	Port     int    `yaml:"port"     env:"PORT, required"`
+	User     string `yaml:"user"     env:"USER, required"`
+	Password string `yaml:"password" env:"PASSWORD, required"`
+	DBName   string `yaml:"dbname"   env:"DB, required"`
+	SSLMode  string `yaml:"sslmode"  env:"SSLMODE, default=disable"`
 }
 
 func (c PostgresConfig) DSN() string {
@@ -41,7 +47,24 @@ func (c PostgresConfig) DSN() string {
 }
 
 type WorkerConfig struct {
-	Interval time.Duration `yaml:"interval"`
+	Interval time.Duration `yaml:"interval" env:"INTERVAL, default=1h"`
+}
+
+type AuthConfig struct {
+	JWTSecret    string        `yaml:"jwt_secret"    env:"JWT_SECRET, required"`
+	AccessTTL    time.Duration `yaml:"access_ttl"    env:"ACCESS_TTL, default=15m"`
+	RefreshTTL   time.Duration `yaml:"refresh_ttl"   env:"REFRESH_TTL, default=720h"`
+	CookieName   string        `yaml:"cookie_name"   env:"COOKIE_NAME, default=session"`
+	CookieDomain string        `yaml:"cookie_domain" env:"COOKIE_DOMAIN"`
+	SecureCookie bool          `yaml:"secure_cookie" env:"SECURE_COOKIE, default=true"`
+}
+
+type CORSConfig struct {
+	AllowedOrigins []string `yaml:"allowed_origins" env:"ALLOWED_ORIGINS, delimiter=;"`
+}
+
+type CSRFConfig struct {
+	Secret string `yaml:"secret" env:"SECRET"`
 }
 
 func Load() (*Config, error) {
@@ -50,7 +73,16 @@ func Load() (*Config, error) {
 		return loadFromFile(configPath)
 	}
 
-	return loadFromEnv()
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("load .env: %w", err)
+	}
+
+	cfg := &Config{}
+	if err := envconfig.Process(context.Background(), cfg); err != nil {
+		return nil, fmt.Errorf("process env: %w", err)
+	}
+	applyDefaults(cfg)
+	return cfg, nil
 }
 
 func loadFromFile(path string) (*Config, error) {
@@ -64,54 +96,18 @@ func loadFromFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("unmarshal yaml: %w", err)
 	}
 
+	applyDefaults(cfg)
 	return cfg, nil
 }
 
-func loadFromEnv() (*Config, error) {
-	port, err := strconv.Atoi(mustGetEnv("POSTGRES_PORT"))
-	if err != nil {
-		return nil, fmt.Errorf("invalid POSTGRES_PORT: %w", err)
+func applyDefaults(cfg *Config) {
+	if cfg.Auth.AccessTTL == 0 {
+		cfg.Auth.AccessTTL = 15 * time.Minute
 	}
-
-	interval, err := time.ParseDuration(getEnv("WORKER_INTERVAL", "1h"))
-	if err != nil {
-		return nil, fmt.Errorf("invalid WORKER_INTERVAL: %w", err)
+	if cfg.Auth.RefreshTTL == 0 {
+		cfg.Auth.RefreshTTL = 30 * 24 * time.Hour
 	}
-
-	return &Config{
-		HTTP: HTTPConfig{
-			Port: getEnv("HTTP_PORT", "8080"),
-		},
-		Postgres: PostgresConfig{
-			Host:     mustGetEnv("POSTGRES_HOST"),
-			Port:     port,
-			User:     mustGetEnv("POSTGRES_USER"),
-			Password: mustGetEnv("POSTGRES_PASSWORD"),
-			DBName:   mustGetEnv("POSTGRES_DB"),
-			SSLMode:  getEnv("POSTGRES_SSLMODE", "disable"),
-		},
-		RabbitMQ: RabbitMQConfig{
-			URL:      mustGetEnv("RABBITMQ_URL"),
-			Exchange: mustGetEnv("RABBITMQ_EXCHANGE"),
-			Queue:    mustGetEnv("RABBITMQ_QUEUE"),
-		},
-		Worker: WorkerConfig{
-			Interval: interval,
-		},
-	}, nil
-}
-
-func getEnv(key, defaultVal string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
+	if cfg.Auth.CookieName == "" {
+		cfg.Auth.CookieName = "session"
 	}
-	return defaultVal
-}
-
-func mustGetEnv(key string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		panic(fmt.Sprintf("environment variable %s is required", key))
-	}
-	return val
 }

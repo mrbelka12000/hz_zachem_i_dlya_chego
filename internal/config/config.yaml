@@ -16,3 +16,18 @@ rabbitmq:
 
 worker:
   interval: "1h"
+
+auth:
+  jwt_secret: "dev-only-change-me-32-bytes-min!!"
+  access_ttl: "15m"
+  refresh_ttl: "720h"
+  cookie_name: "session"
+  cookie_domain: ""
+  secure_cookie: false
+
+cors:
+  allowed_origins:
+    - "http://localhost:3000"
+
+csrf:
+  secret: "dev-only-csrf-secret-change-me-32"
