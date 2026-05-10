@@ -65,6 +65,51 @@ func (r *TransactionRepo) FindByExternalHash(ctx context.Context, householdID, a
 	return &t, nil
 }
 
+// ListUnpairedExpenseAndIncome returns rows that are candidates for
+// transfer pairing: still alive, not yet part of a transfer, and of
+// type expense or income. Service layer does the actual matching
+// in-memory.
+func (r *TransactionRepo) ListUnpairedExpenseAndIncome(ctx context.Context, householdID models.ID) ([]models.Transaction, error) {
+	var rows []models.Transaction
+	err := r.db.WithContext(ctx).
+		Where("household_id = ? AND transfer_id IS NULL AND type IN (?,?)",
+			householdID,
+			models.TransactionTypeExpense,
+			models.TransactionTypeIncome,
+		).
+		Order("occurred_at ASC, id ASC").
+		Find(&rows).Error
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	return rows, nil
+}
+
+// PairAsTransfer atomically converts one expense + one income row
+// (already validated by the caller) into a paired transfer leg. Both
+// rows must belong to the household and currently have transfer_id IS NULL.
+func (r *TransactionRepo) PairAsTransfer(ctx context.Context, householdID, expenseID, incomeID, transferID models.ID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		updates := map[string]any{
+			"type":            models.TransactionTypeTransfer,
+			"transfer_id":     transferID,
+			"category_id":     nil,
+			"category_source": models.CategorySourceNone,
+			"updated_at":      gorm.Expr("NOW()"),
+		}
+		res := tx.Model(&models.Transaction{}).
+			Where("household_id = ? AND id IN ? AND transfer_id IS NULL", householdID, []models.ID{expenseID, incomeID}).
+			Updates(updates)
+		if res.Error != nil {
+			return mapErr(res.Error)
+		}
+		if res.RowsAffected != 2 {
+			return ErrConflict
+		}
+		return nil
+	})
+}
+
 func (r *TransactionRepo) GetByID(ctx context.Context, householdID, id models.ID) (*models.Transaction, error) {
 	var t models.Transaction
 	err := r.db.WithContext(ctx).

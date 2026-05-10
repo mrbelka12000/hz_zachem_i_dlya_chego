@@ -116,11 +116,33 @@ export function TransactionsList() {
   const hasMore = Boolean(list.data?.next_cursor)
   const onFirstPage = !filters.cursor_id
 
+  const pair = useMutation({
+    mutationFn: () => transactionsApi.pairTransfers(),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['analytics'] })
+      alert(
+        res.paired === 0
+          ? 'No new transfer pairs detected.'
+          : `Paired ${res.paired} transfer${res.paired === 1 ? '' : 's'}.`,
+      )
+    },
+  })
+
   return (
     <div className="space-y-5">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Transactions</h1>
         <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => pair.mutate()}
+            disabled={pair.isPending}
+            className="rounded-md border border-slate-300 text-sm px-3 py-1.5 hover:bg-white disabled:opacity-60"
+            title="Find income/expense pairs with same day, amount, currency on different accounts"
+          >
+            {pair.isPending ? 'Detecting…' : 'Detect transfers'}
+          </button>
           <Link
             to="/transactions/transfer"
             className="rounded-md border border-slate-300 text-sm px-3 py-1.5 hover:bg-white"

@@ -246,6 +246,16 @@ func (r *Router) updateTransaction(c *gin.Context) {
 	ok(c, t)
 }
 
+func (r *Router) pairTransfers(c *gin.Context) {
+	hid := middleware.MustHouseholdID(c)
+	paired, err := r.svc.Transactions.PairTransfers(c.Request.Context(), hid)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	ok(c, gin.H{"paired": paired})
+}
+
 func (r *Router) deleteTransaction(c *gin.Context) {
 	hid := middleware.MustHouseholdID(c)
 	uid := middleware.MustUserID(c)

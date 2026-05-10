@@ -11,8 +11,9 @@ import (
 )
 
 type ImportService struct {
-	repo     *repo.Repository
-	accounts *AccountService
+	repo         *repo.Repository
+	accounts     *AccountService
+	transactions *TransactionService
 }
 
 type ImportCSVInput struct {
@@ -26,6 +27,7 @@ type ImportSummary struct {
 	Total      int            `json:"total"`
 	Inserted   int            `json:"inserted"`
 	Duplicates int            `json:"duplicates"`
+	Paired     int            `json:"paired"`
 	Errors     []csv.RowError `json:"errors,omitempty"`
 }
 
@@ -77,6 +79,14 @@ func (s *ImportService) ImportCSV(ctx context.Context, in ImportCSVInput) (*Impo
 			return nil, err
 		}
 		summary.Inserted++
+	}
+
+	if summary.Inserted > 0 && s.transactions != nil {
+		paired, err := s.transactions.PairTransfers(ctx, in.HouseholdID)
+		if err != nil {
+			return summary, err
+		}
+		summary.Paired = paired
 	}
 
 	return summary, nil

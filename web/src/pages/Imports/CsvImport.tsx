@@ -112,9 +112,10 @@ function ImportResult({ summary }: { summary: ImportSummary }) {
   return (
     <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3 max-w-xl">
       <h2 className="text-sm font-semibold text-slate-700">Result</h2>
-      <dl className="grid grid-cols-3 gap-4 text-center">
+      <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
         <Stat label="Inserted" value={summary.inserted} accent="text-green-700" />
         <Stat label="Duplicates" value={summary.duplicates} accent="text-slate-600" />
+        <Stat label="Paired" value={summary.paired} accent="text-slate-900" />
         <Stat
           label="Errors"
           value={summary.errors?.length ?? 0}

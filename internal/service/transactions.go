@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	"github.com/mrbelka12000/hz_zachem/internal/models"
@@ -244,4 +245,81 @@ func categorySourceForUpdate(categoryID *models.ID) models.CategorySource {
 		return models.CategorySourceNone
 	}
 	return models.CategorySourceManual
+}
+
+// PairTransfers scans the household's unpaired expense+income rows and
+// merges each unambiguous pair into a transfer.
+//
+// Match rule: same calendar day in the household timezone, same amount,
+// same currency, different accounts. A bucket only counts when it has
+// exactly one expense and exactly one income — anything else is left
+// alone so the user can pair manually.
+func (s *TransactionService) PairTransfers(ctx context.Context, householdID models.ID) (int, error) {
+	h, err := s.households.Get(ctx, householdID)
+	if err != nil {
+		return 0, err
+	}
+	loc, err := time.LoadLocation(h.Timezone)
+	if err != nil {
+		loc = time.UTC
+	}
+
+	rows, err := s.repo.Transactions.ListUnpairedExpenseAndIncome(ctx, householdID)
+	if err != nil {
+		return 0, err
+	}
+
+	type bucketKey struct {
+		day      string
+		amount   string
+		currency string
+	}
+	type bucket struct {
+		expenses []models.Transaction
+		incomes  []models.Transaction
+	}
+	buckets := map[bucketKey]*bucket{}
+	for _, r := range rows {
+		k := bucketKey{
+			day:      r.OccurredAt.In(loc).Format("2006-01-02"),
+			amount:   r.Amount.String(),
+			currency: r.Currency,
+		}
+		b := buckets[k]
+		if b == nil {
+			b = &bucket{}
+			buckets[k] = b
+		}
+		switch r.Type {
+		case models.TransactionTypeExpense:
+			b.expenses = append(b.expenses, r)
+		case models.TransactionTypeIncome:
+			b.incomes = append(b.incomes, r)
+		}
+	}
+
+	paired := 0
+	for _, b := range buckets {
+		if len(b.expenses) != 1 || len(b.incomes) != 1 {
+			continue
+		}
+		e := b.expenses[0]
+		i := b.incomes[0]
+		if e.AccountID == i.AccountID {
+			continue
+		}
+		transferID, err := uuid.NewRandom()
+		if err != nil {
+			return paired, err
+		}
+		if err := s.repo.Transactions.PairAsTransfer(ctx, householdID, e.ID, i.ID, transferID); err != nil {
+			if errors.Is(err, repo.ErrConflict) {
+				// concurrent update; skip and let a future run try again
+				continue
+			}
+			return paired, err
+		}
+		paired++
+	}
+	return paired, nil
 }

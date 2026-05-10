@@ -95,4 +95,7 @@ export const transactionsApi = {
     apiFetch<Transaction>('PUT', `/v1/transactions/${id}`, { body: payload }),
 
   remove: (id: ID) => apiFetch<void>('DELETE', `/v1/transactions/${id}`),
+
+  pairTransfers: () =>
+    apiFetch<{ paired: number }>('POST', '/v1/transactions/pair-transfers'),
 }

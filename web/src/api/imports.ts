@@ -5,6 +5,7 @@ export interface ImportSummary {
   total: number
   inserted: number
   duplicates: number
+  paired: number
   errors?: Array<{ line: number; message: string }>
 }
 

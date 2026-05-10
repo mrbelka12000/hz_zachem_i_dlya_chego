@@ -28,7 +28,7 @@ func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
 	categories := &CategoryService{repo: repository}
 	transactions := &TransactionService{repo: repository, households: households, accounts: accounts}
 	analytics := &AnalyticsService{repo: repository, households: households}
-	imports := &ImportService{repo: repository, accounts: accounts}
+	imports := &ImportService{repo: repository, accounts: accounts, transactions: transactions}
 
 	return &Service{
 		repo:         repository,
