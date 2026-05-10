@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/mrbelka12000/hz_zachem/internal/delivery/http/middleware"
 	"github.com/mrbelka12000/hz_zachem/internal/service"
@@ -94,6 +95,22 @@ func (r *Router) cashflowByMonth(c *gin.Context) {
 		}
 		months = n
 	}
+
+	if raw := c.Query("account_id"); raw != "" {
+		accountID, err := uuid.Parse(raw)
+		if err != nil {
+			middleware.Respond(c, service.ErrInvalidInput)
+			return
+		}
+		rows, err := r.svc.Analytics.AccountCashflowByMonth(c.Request.Context(), hid, accountID, months)
+		if err != nil {
+			middleware.Respond(c, err)
+			return
+		}
+		ok(c, gin.H{"rows": rows})
+		return
+	}
+
 	rows, err := r.svc.Analytics.CashflowByMonth(c.Request.Context(), hid, months)
 	if err != nil {
 		middleware.Respond(c, err)

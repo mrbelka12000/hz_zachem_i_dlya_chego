@@ -69,6 +69,7 @@ func (r *Router) Init() *gin.Engine {
 			scoped.GET("/accounts", r.listAccounts)
 			scoped.POST("/accounts", r.createAccount)
 			scoped.GET("/accounts/:id", r.getAccount)
+			scoped.GET("/accounts/:id/balance", r.getAccountBalance)
 			scoped.PUT("/accounts/:id", r.updateAccount)
 			scoped.PATCH("/accounts/:id/archive", r.archiveAccount)
 			scoped.PATCH("/accounts/:id/unarchive", r.unarchiveAccount)

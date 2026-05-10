@@ -79,6 +79,34 @@ func (r *AccountRepo) SetStatus(ctx context.Context, householdID, id models.ID, 
 	return nil
 }
 
+// Balance is initial_balance + signed sum of non-deleted transactions
+// on this account: incomes and 'in' transfers add, expenses and 'out'
+// transfers subtract. Adjustments are skipped because their sign is
+// caller-defined and not stored on the row.
+func (r *AccountRepo) Balance(ctx context.Context, householdID, accountID models.ID) (models.Money, error) {
+	var balance models.Money
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT a.initial_balance + COALESCE((
+			SELECT SUM(CASE
+				WHEN t.type = 'income' OR (t.type = 'transfer' AND t.transfer_direction = 'in') THEN t.amount
+				WHEN t.type = 'expense' OR (t.type = 'transfer' AND t.transfer_direction = 'out') THEN -t.amount
+				ELSE 0 END)
+			FROM transactions t
+			WHERE t.account_id = a.id
+			  AND t.household_id = a.household_id
+			  AND t.deleted_at IS NULL
+		), 0) AS balance
+		FROM accounts a
+		WHERE a.id = ?
+		  AND a.household_id = ?
+		  AND a.deleted_at IS NULL
+	`, accountID, householdID).Scan(&balance).Error
+	if err != nil {
+		return models.Money{}, mapErr(err)
+	}
+	return balance, nil
+}
+
 func (r *AccountRepo) SoftDelete(ctx context.Context, householdID, id, deletedBy models.ID) error {
 	res := r.db.WithContext(ctx).
 		Model(&models.Account{}).

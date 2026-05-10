@@ -93,6 +93,26 @@ func (r *Router) updateAccount(c *gin.Context) {
 	ok(c, a)
 }
 
+func (r *Router) getAccountBalance(c *gin.Context) {
+	hid := middleware.MustHouseholdID(c)
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		middleware.Respond(c, service.ErrInvalidInput)
+		return
+	}
+	a, err := r.svc.Accounts.Get(c.Request.Context(), hid, id)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	balance, err := r.svc.Accounts.Balance(c.Request.Context(), hid, id)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	ok(c, gin.H{"balance": balance, "currency": a.Currency})
+}
+
 func (r *Router) archiveAccount(c *gin.Context) {
 	hid := middleware.MustHouseholdID(c)
 	id, err := uuid.Parse(c.Param("id"))

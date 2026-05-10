@@ -31,8 +31,8 @@ export const analyticsApi = {
       query: { from, to },
     }).then((r) => r.rows),
 
-  cashflowByMonth: (months = 6) =>
+  cashflowByMonth: (months = 6, accountId?: string) =>
     apiFetch<RowsEnvelope<CashflowMonthRow>>('GET', '/v1/analytics/cashflow-by-month', {
-      query: { months },
+      query: { months, account_id: accountId },
     }).then((r) => r.rows),
 }

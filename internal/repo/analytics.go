@@ -185,4 +185,42 @@ func (r *AnalyticsRepo) CashflowByMonth(ctx context.Context, householdID models.
 	return rows, nil
 }
 
+// AccountCashflowByMonth is the per-account variant: same row shape as
+// CashflowByMonth, but transfer legs DO count (a transfer is a real
+// inflow/outflow from the chosen account's perspective). Each transfer
+// row is mapped to expense/income via transfer_direction.
+func (r *AnalyticsRepo) AccountCashflowByMonth(ctx context.Context, householdID, accountID models.ID, timezone string, from, to time.Time) ([]CashflowMonthRow, error) {
+	var rows []CashflowMonthRow
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT
+			date_trunc('month', t.occurred_at AT TIME ZONE ?) AS month,
+			t.currency,
+			COALESCE(SUM(CASE
+				WHEN t.type = 'expense' THEN t.amount
+				WHEN t.type = 'transfer' AND t.transfer_direction = 'out' THEN t.amount
+				ELSE 0 END), 0) AS expense,
+			COALESCE(SUM(CASE
+				WHEN t.type = 'income' THEN t.amount
+				WHEN t.type = 'transfer' AND t.transfer_direction = 'in' THEN t.amount
+				ELSE 0 END), 0) AS income,
+			COALESCE(SUM(CASE
+				WHEN t.type = 'income' OR (t.type = 'transfer' AND t.transfer_direction = 'in') THEN t.amount
+				WHEN t.type = 'expense' OR (t.type = 'transfer' AND t.transfer_direction = 'out') THEN -t.amount
+				ELSE 0 END), 0) AS net
+		FROM transactions t
+		WHERE t.household_id = ?
+		  AND t.account_id = ?
+		  AND t.occurred_at >= ?
+		  AND t.occurred_at < ?
+		  AND t.deleted_at IS NULL
+		  AND t.type IN ('expense','income','transfer')
+		GROUP BY month, t.currency
+		ORDER BY month ASC
+	`, timezone, householdID, accountID, from, to).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 var _ = gorm.ErrRecordNotFound

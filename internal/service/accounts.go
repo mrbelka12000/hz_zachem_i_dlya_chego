@@ -81,6 +81,17 @@ func (s *AccountService) List(ctx context.Context, householdID models.ID, includ
 	return s.repo.Accounts.List(ctx, householdID, includeArchived)
 }
 
+func (s *AccountService) Balance(ctx context.Context, householdID, id models.ID) (models.Money, error) {
+	balance, err := s.repo.Accounts.Balance(ctx, householdID, id)
+	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return models.Money{}, ErrNotFound
+		}
+		return models.Money{}, err
+	}
+	return balance, nil
+}
+
 func (s *AccountService) Update(ctx context.Context, in UpdateAccountInput) (*models.Account, error) {
 	in.Name = strings.TrimSpace(in.Name)
 	in.Currency = strings.ToUpper(strings.TrimSpace(in.Currency))

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { accountsApi } from '../../api/accounts'
@@ -8,6 +8,7 @@ import { formatMoney } from '../../lib/money'
 
 export function AccountsList() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
 
   const accounts = useQuery<Account[]>({
     queryKey: ['accounts'],
@@ -84,7 +85,14 @@ export function AccountsList() {
             {rows.map((a) => {
               const archived = a.status === 'archived'
               return (
-                <tr key={a.id} className={archived ? 'bg-slate-50/60' : ''}>
+                <tr
+                  key={a.id}
+                  onClick={() => navigate(`/accounts/${a.id}`)}
+                  className={
+                    'cursor-pointer hover:bg-slate-50 ' +
+                    (archived ? 'bg-slate-50/60' : '')
+                  }
+                >
                   <td className="px-4 py-2 text-slate-800">{a.name}</td>
                   <td className="px-4 py-2 text-slate-600 capitalize">{a.type}</td>
                   <td className="px-4 py-2 text-slate-600">{a.currency}</td>
@@ -107,6 +115,7 @@ export function AccountsList() {
                   <td className="px-4 py-2 text-right whitespace-nowrap">
                     <Link
                       to={`/accounts/${a.id}/edit`}
+                      onClick={(e) => e.stopPropagation()}
                       className="text-xs text-slate-600 hover:underline mr-3"
                     >
                       Edit
@@ -114,7 +123,10 @@ export function AccountsList() {
                     {archived ? (
                       <button
                         type="button"
-                        onClick={() => unarchive.mutate(a.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          unarchive.mutate(a.id)
+                        }}
                         className="text-xs text-slate-600 hover:underline mr-3"
                       >
                         Unarchive
@@ -122,7 +134,10 @@ export function AccountsList() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => archive.mutate(a.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          archive.mutate(a.id)
+                        }}
                         className="text-xs text-slate-600 hover:underline mr-3"
                       >
                         Archive
@@ -130,7 +145,10 @@ export function AccountsList() {
                     )}
                     <button
                       type="button"
-                      onClick={() => onDelete(a)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDelete(a)
+                      }}
                       className="text-xs text-red-600 hover:underline"
                     >
                       Delete

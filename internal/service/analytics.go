@@ -69,3 +69,24 @@ func (s *AnalyticsService) CashflowByMonth(ctx context.Context, householdID mode
 	from := time.Date(now.Year(), now.Month()-time.Month(months-1), 1, 0, 0, 0, 0, loc)
 	return s.repo.Analytics.CashflowByMonth(ctx, householdID, h.Timezone, from, to)
 }
+
+// AccountCashflowByMonth scopes cashflow to a single account; transfer
+// legs are folded into expense/income via transfer_direction so the
+// chart reflects what actually moved through the account.
+func (s *AnalyticsService) AccountCashflowByMonth(ctx context.Context, householdID, accountID models.ID, months int) ([]repo.CashflowMonthRow, error) {
+	if months <= 0 || months > 36 {
+		return nil, ErrInvalidInput
+	}
+	h, err := s.households.Get(ctx, householdID)
+	if err != nil {
+		return nil, err
+	}
+	loc, err := time.LoadLocation(h.Timezone)
+	if err != nil {
+		loc = time.UTC
+	}
+	now := time.Now().In(loc)
+	to := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, loc)
+	from := time.Date(now.Year(), now.Month()-time.Month(months-1), 1, 0, 0, 0, 0, loc)
+	return s.repo.Analytics.AccountCashflowByMonth(ctx, householdID, accountID, h.Timezone, from, to)
+}

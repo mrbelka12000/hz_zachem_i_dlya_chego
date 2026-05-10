@@ -13,6 +13,7 @@ import { EditTransaction } from './pages/Transactions/Edit'
 import { TransactionDetail } from './pages/Transactions/Detail'
 import { CreateTransfer } from './pages/Transactions/Transfer'
 import { AccountsList } from './pages/Accounts/List'
+import { AccountDetail } from './pages/Accounts/Detail'
 import { NewAccount } from './pages/Accounts/New'
 import { EditAccount } from './pages/Accounts/Edit'
 import { CategoriesList } from './pages/Categories/List'
@@ -96,6 +97,14 @@ export default function App() {
             element={
               <Protected>
                 <NewAccount />
+              </Protected>
+            }
+          />
+          <Route
+            path="/accounts/:id"
+            element={
+              <Protected>
+                <AccountDetail />
               </Protected>
             }
           />
