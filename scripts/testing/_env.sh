@@ -24,21 +24,54 @@ pretty() {
     fi
 }
 
+# Read a cookie value from the curl jar (Netscape format). Returns empty if missing.
+cookie_value() {
+    local name="$1"
+    [ -f "$COOKIE_JAR" ] || return 0
+    awk -v n="$name" '$0 !~ /^#/ && NF >= 7 && $6 == n { print $7; exit }' "$COOKIE_JAR"
+}
+
+# Make sure we have a csrf_token cookie. Hit /healthz once if not.
+ensure_csrf_token() {
+    local token
+    token=$(cookie_value csrf_token)
+    if [ -z "$token" ]; then
+        curl -sS -o /dev/null -b "$COOKIE_JAR" -c "$COOKIE_JAR" "${BASE_URL}/healthz"
+        token=$(cookie_value csrf_token)
+    fi
+    printf '%s' "$token"
+}
+
 # req METHOD PATH [JSON_BODY]
-# Sends a request with the cookie jar attached. Idempotency-Key honored if set.
+# Attaches the cookie jar; forwards Idempotency-Key and CSRF token.
 req() {
     local method="$1"
     local path="$2"
     local body="${3:-}"
+
+    local upper
+    upper=$(printf '%s' "$method" | tr '[:lower:]' '[:upper:]')
+
     local args=(-sS -X "$method" -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
         -H 'Content-Type: application/json' \
         -H 'Accept: application/json')
+
     if [ -n "${IDEMPOTENCY_KEY:-}" ]; then
         args+=(-H "Idempotency-Key: ${IDEMPOTENCY_KEY}")
     fi
+
+    if [ "$upper" != "GET" ] && [ "$upper" != "HEAD" ] && [ "$upper" != "OPTIONS" ]; then
+        local csrf
+        csrf=$(ensure_csrf_token)
+        if [ -n "$csrf" ]; then
+            args+=(-H "X-CSRF-Token: ${csrf}")
+        fi
+    fi
+
     if [ -n "$body" ]; then
         args+=(--data "$body")
     fi
+
     curl "${args[@]}" "${BASE_URL}${path}"
 }
 

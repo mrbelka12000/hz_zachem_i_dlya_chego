@@ -42,6 +42,8 @@ func (r *Router) Init() *gin.Engine {
 		}))
 	}
 
+	engine.Use(middleware.CSRF(r.cfg.CSRF))
+
 	engine.GET("/healthz", r.healthz)
 	engine.GET("/readyz", r.readyz)
 
