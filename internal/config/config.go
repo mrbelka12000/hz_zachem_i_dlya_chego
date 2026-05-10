@@ -26,10 +26,13 @@ type HTTPConfig struct {
 	Port string `yaml:"port" env:"PORT, default=8080"`
 }
 
+// RabbitMQConfig is optional. The wiring exists for future budget
+// recompute / alert flows but is unused at runtime today, so an empty
+// URL means "skip RabbitMQ entirely" rather than failing startup.
 type RabbitMQConfig struct {
-	URL      string `yaml:"url"      env:"URL, required"`
-	Exchange string `yaml:"exchange" env:"EXCHANGE, required"`
-	Queue    string `yaml:"queue"    env:"QUEUE, required"`
+	URL      string `yaml:"url"      env:"URL"`
+	Exchange string `yaml:"exchange" env:"EXCHANGE"`
+	Queue    string `yaml:"queue"    env:"QUEUE"`
 }
 
 type PostgresConfig struct {

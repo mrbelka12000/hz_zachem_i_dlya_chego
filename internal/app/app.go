@@ -53,17 +53,24 @@ func Run() {
 	}()
 	log.Println("connected to postgres")
 
-	rmq, err := rabbitmq.New(cfg.RabbitMQ)
-	if err != nil {
-		log.Printf("connect to rabbitmq: %v", err)
-		return
+	var rmq *rabbitmq.Client
+	if cfg.RabbitMQ.URL != "" {
+		rmq, err = rabbitmq.New(cfg.RabbitMQ)
+		if err != nil {
+			log.Printf("connect to rabbitmq: %v", err)
+			return
+		}
+		defer rmq.Close()
+		log.Println("connected to rabbitmq")
+	} else {
+		log.Println("rabbitmq disabled (RABBITMQ_URL not set)")
 	}
-	defer rmq.Close()
-	log.Println("connected to rabbitmq")
 
 	repository := repo.New(db)
 	svc := service.New(cfg.Auth, repository)
-	_ = producer.New(rmq, cfg.RabbitMQ.Queue)
+	if rmq != nil {
+		_ = producer.New(rmq, cfg.RabbitMQ.Queue)
+	}
 
 	router := v1.NewRouter(svc, cfg)
 	srv := server.New(cfg.HTTP.Port, router.Init())
