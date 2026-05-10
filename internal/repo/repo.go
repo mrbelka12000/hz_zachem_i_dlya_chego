@@ -3,17 +3,38 @@ package repo
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 )
 
 type Repository struct {
-	db *pgxpool.Pool
+	db *gorm.DB
+
+	Users        *UserRepo
+	Households   *HouseholdRepo
+	Accounts     *AccountRepo
+	Categories   *CategoryRepo
+	Transactions *TransactionRepo
+	Analytics    *AnalyticsRepo
 }
 
-func New(db *pgxpool.Pool) *Repository {
-	return &Repository{db: db}
+func New(db *gorm.DB) *Repository {
+	return &Repository{
+		db:           db,
+		Users:        &UserRepo{db: db},
+		Households:   &HouseholdRepo{db: db},
+		Accounts:     &AccountRepo{db: db},
+		Categories:   &CategoryRepo{db: db},
+		Transactions: &TransactionRepo{db: db},
+		Analytics:    &AnalyticsRepo{db: db},
+	}
 }
+
+func (r *Repository) DB() *gorm.DB { return r.db }
 
 func (r *Repository) Ping(ctx context.Context) error {
-	return r.db.Ping(ctx)
+	sqlDB, err := r.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.PingContext(ctx)
 }

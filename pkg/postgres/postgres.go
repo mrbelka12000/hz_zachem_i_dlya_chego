@@ -5,35 +5,46 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+
 	"github.com/qazevent/hz_zachem/internal/config"
 )
 
-func New(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, error) {
-	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName, cfg.SSLMode,
-	)
+const (
+	maxOpenConns    = 10
+	maxIdleConns    = 2
+	connMaxLifetime = time.Hour
+	connMaxIdleTime = 30 * time.Minute
+)
 
-	poolCfg, err := pgxpool.ParseConfig(dsn)
+func New(ctx context.Context, cfg config.PostgresConfig) (*gorm.DB, error) {
+	dsn := cfg.DSN()
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger:                 logger.Default.LogMode(logger.Warn),
+		SkipDefaultTransaction: true,
+		PrepareStmt:            true,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("parse config: %w", err)
+		return nil, fmt.Errorf("open gorm: %w", err)
 	}
 
-	poolCfg.MaxConns = 10
-	poolCfg.MinConns = 2
-	poolCfg.MaxConnLifetime = time.Hour
-	poolCfg.MaxConnIdleTime = 30 * time.Minute
-
-	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, fmt.Errorf("create pool: %w", err)
+		return nil, fmt.Errorf("unwrap sql.DB: %w", err)
 	}
 
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetMaxIdleConns(maxIdleConns)
+	sqlDB.SetConnMaxLifetime(connMaxLifetime)
+	sqlDB.SetConnMaxIdleTime(connMaxIdleTime)
+
+	if err := sqlDB.PingContext(ctx); err != nil {
+		_ = sqlDB.Close()
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
-	return pool, nil
+	return db, nil
 }
