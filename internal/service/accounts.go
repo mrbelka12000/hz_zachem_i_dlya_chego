@@ -137,12 +137,17 @@ func (s *AccountService) SoftDelete(ctx context.Context, householdID, id, delete
 	return nil
 }
 
-func (s *AccountService) checkCurrency(ctx context.Context, householdID models.ID, currency string) error {
-	h, err := s.households.Get(ctx, householdID)
-	if err != nil {
-		return err
-	}
-	if !strings.EqualFold(h.BaseCurrency, currency) {
+// supportedCurrencies enumerates currencies the app accepts on accounts.
+// KZT is the base; USD and EUR are convertible at display time on the
+// client via the public jsdelivr currency API.
+var supportedCurrencies = map[string]struct{}{
+	"KZT": {},
+	"USD": {},
+	"EUR": {},
+}
+
+func (s *AccountService) checkCurrency(_ context.Context, _ models.ID, currency string) error {
+	if _, ok := supportedCurrencies[strings.ToUpper(currency)]; !ok {
 		return ErrCurrencyMismatch
 	}
 	return nil

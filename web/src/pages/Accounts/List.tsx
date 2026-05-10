@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { accountsApi } from '../../api/accounts'
 import type { Account, ID } from '../../api/types'
+import { ConvertedHint } from '../../components/ConvertedHint'
 import { formatMoney } from '../../lib/money'
 
 export function AccountsList() {
@@ -89,6 +90,7 @@ export function AccountsList() {
                   <td className="px-4 py-2 text-slate-600">{a.currency}</td>
                   <td className="px-4 py-2 text-right tabular-nums">
                     {formatMoney(a.initial_balance, a.currency)}
+                    <ConvertedHint amount={a.initial_balance} currency={a.currency} />
                   </td>
                   <td className="px-4 py-2">
                     <span

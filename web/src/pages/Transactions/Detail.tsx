@@ -6,6 +6,7 @@ import { categoriesApi } from '../../api/categories'
 import { transactionsApi } from '../../api/transactions'
 import type { Account, Category, ID, Transaction } from '../../api/types'
 import { formatDateTime } from '../../lib/dates'
+import { ConvertedHint } from '../../components/ConvertedHint'
 import { formatMoney } from '../../lib/money'
 import { amountClassName, amountPrefix } from '../../lib/transactions'
 
@@ -100,12 +101,15 @@ export function TransactionDetail() {
       <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
         <div className="flex items-baseline justify-between">
           <p className="text-xs uppercase tracking-wide text-slate-500">{t.type}</p>
-          <p
-            className={'text-2xl font-semibold tabular-nums ' + amountClassName(t)}
-          >
-            {amountPrefix(t)}
-            {formatMoney(t.amount, t.currency)}
-          </p>
+          <div className="text-right">
+            <p
+              className={'text-2xl font-semibold tabular-nums ' + amountClassName(t)}
+            >
+              {amountPrefix(t)}
+              {formatMoney(t.amount, t.currency)}
+            </p>
+            <ConvertedHint amount={t.amount} currency={t.currency} />
+          </div>
         </div>
         <h2 className="text-lg font-medium text-slate-800">
           {t.description || t.merchant || '(unnamed)'}
@@ -184,10 +188,13 @@ function CounterpartCard({
       </header>
       <div className="flex items-baseline justify-between">
         <p className="text-xs uppercase tracking-wide text-slate-500">{t.type}</p>
-        <p className={'text-lg font-semibold tabular-nums ' + amountClassName(t)}>
-          {amountPrefix(t)}
-          {formatMoney(t.amount, t.currency)}
-        </p>
+        <div className="text-right">
+          <p className={'text-lg font-semibold tabular-nums ' + amountClassName(t)}>
+            {amountPrefix(t)}
+            {formatMoney(t.amount, t.currency)}
+          </p>
+          <ConvertedHint amount={t.amount} currency={t.currency} />
+        </div>
       </div>
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-y-3 text-sm mt-3">
         <Field label="Account">{account?.name ?? '—'}</Field>

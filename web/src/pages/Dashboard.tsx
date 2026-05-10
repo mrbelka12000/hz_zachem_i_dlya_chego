@@ -11,6 +11,7 @@ import type {
   MerchantSpendRow,
   Transaction,
 } from '../api/types'
+import { ConvertedHint } from '../components/ConvertedHint'
 import { currentMonthRange, formatDate, formatMonth } from '../lib/dates'
 import { formatMoney, sumMoney } from '../lib/money'
 import { amountClassName, amountPrefix } from '../lib/transactions'
@@ -347,9 +348,12 @@ function RecentList({ rows }: { rows: Transaction[] }) {
               {formatDate(t.occurred_at)} · {t.type}
             </p>
           </div>
-          <span className={'font-medium tabular-nums ' + amountClassName(t)}>
-            {amountPrefix(t)}
-            {formatMoney(t.amount, t.currency)}
+          <span className="text-right">
+            <span className={'font-medium tabular-nums ' + amountClassName(t)}>
+              {amountPrefix(t)}
+              {formatMoney(t.amount, t.currency)}
+            </span>
+            <ConvertedHint amount={t.amount} currency={t.currency} />
           </span>
         </li>
       ))}

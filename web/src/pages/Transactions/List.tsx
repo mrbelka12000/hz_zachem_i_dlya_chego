@@ -12,6 +12,7 @@ import type {
   TransactionType,
   TransactionsListResponse,
 } from '../../api/types'
+import { ConvertedHint } from '../../components/ConvertedHint'
 import { formatDate } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { amountClassName, amountPrefix } from '../../lib/transactions'
@@ -286,6 +287,7 @@ export function TransactionsList() {
                   >
                     {amountPrefix(t)}
                     {formatMoney(t.amount, t.currency)}
+                    <ConvertedHint amount={t.amount} currency={t.currency} />
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
                     <Link
