@@ -208,7 +208,7 @@ func (r *Router) getTransaction(c *gin.Context) {
 		middleware.Respond(c, service.ErrInvalidInput)
 		return
 	}
-	t, err := r.svc.Transactions.Get(c.Request.Context(), hid, id)
+	t, err := r.svc.Transactions.GetWithCounterpart(c.Request.Context(), hid, id)
 	if err != nil {
 		middleware.Respond(c, err)
 		return

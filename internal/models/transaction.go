@@ -32,6 +32,10 @@ type Transaction struct {
 	UpdatedAt            time.Time         `json:"updated_at"`
 	DeletedAt            gorm.DeletedAt    `gorm:"index" json:"deleted_at,omitempty"`
 	DeletedBy            *ID               `gorm:"type:uuid" json:"deleted_by,omitempty"`
+
+	// Counterpart is populated by the service layer when fetching a
+	// single transfer leg's detail. It is never persisted (gorm:"-").
+	Counterpart *Transaction `gorm:"-" json:"counterpart,omitempty"`
 }
 
 func (Transaction) TableName() string { return "transactions" }

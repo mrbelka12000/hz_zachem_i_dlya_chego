@@ -65,6 +65,20 @@ func (r *TransactionRepo) FindByExternalHash(ctx context.Context, householdID, a
 	return &t, nil
 }
 
+// FindTransferCounterpart returns the OTHER row that shares this row's
+// transfer_id within the same household. Used to render the matching
+// leg of a transfer in the detail view.
+func (r *TransactionRepo) FindTransferCounterpart(ctx context.Context, householdID, transferID, excludeID models.ID) (*models.Transaction, error) {
+	var t models.Transaction
+	err := r.db.WithContext(ctx).
+		Where("household_id = ? AND transfer_id = ? AND id <> ?", householdID, transferID, excludeID).
+		First(&t).Error
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	return &t, nil
+}
+
 // ListUnpairedExpenseAndIncome returns rows that are candidates for
 // transfer pairing: still alive, not yet part of a transfer, and of
 // type expense or income. Service layer does the actual matching

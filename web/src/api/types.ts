@@ -68,6 +68,7 @@ export interface Transaction {
   source: TransactionSource
   external_id?: string | null
   external_hash?: string | null
+  raw_payload?: Record<string, unknown> | null
   transfer_id?: ID | null
   idempotency_key?: string | null
   created_by: ID
@@ -76,6 +77,12 @@ export interface Transaction {
   updated_at: string
   deleted_at?: string | null
   deleted_by?: ID | null
+
+  /**
+   * Populated by GET /v1/transactions/:id when the row is a transfer
+   * leg with a still-existing counterpart in another account.
+   */
+  counterpart?: Transaction | null
 }
 
 export interface Household {

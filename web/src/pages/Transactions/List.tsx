@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { accountsApi } from '../../api/accounts'
@@ -29,6 +29,7 @@ const PAGE_SIZE = 25
 
 export function TransactionsList() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [filters, setFilters] = useState<FilterState>({
     type: '',
     account_id: '',
@@ -256,7 +257,11 @@ export function TransactionsList() {
               const account = accountById.get(t.account_id)
               const category = t.category_id ? categoryById.get(t.category_id) : null
               return (
-                <tr key={t.id}>
+                <tr
+                  key={t.id}
+                  onClick={() => navigate(`/transactions/${t.id}`)}
+                  className="cursor-pointer hover:bg-slate-50"
+                >
                   <td className="px-4 py-2 whitespace-nowrap text-slate-600">
                     {formatDate(t.occurred_at)}
                   </td>
@@ -288,13 +293,17 @@ export function TransactionsList() {
                   <td className="px-4 py-2 text-right whitespace-nowrap">
                     <Link
                       to={`/transactions/${t.id}/edit`}
+                      onClick={(e) => e.stopPropagation()}
                       className="text-xs text-slate-600 hover:underline mr-3"
                     >
                       Edit
                     </Link>
                     <button
                       type="button"
-                      onClick={() => onDelete(t.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDelete(t.id)
+                      }}
                       className="text-xs text-red-600 hover:underline"
                     >
                       Delete

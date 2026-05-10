@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -191,6 +190,28 @@ func (s *TransactionService) Get(ctx context.Context, householdID, id models.ID)
 	return t, nil
 }
 
+// GetWithCounterpart returns the transaction and, when it is a transfer
+// leg with a still-existing counterpart, populates t.Counterpart so a
+// single API response can render both sides.
+func (s *TransactionService) GetWithCounterpart(ctx context.Context, householdID, id models.ID) (*models.Transaction, error) {
+	t, err := s.Get(ctx, householdID, id)
+	if err != nil {
+		return nil, err
+	}
+	if t.TransferID == nil {
+		return t, nil
+	}
+	cp, err := s.repo.Transactions.FindTransferCounterpart(ctx, householdID, *t.TransferID, t.ID)
+	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return t, nil
+		}
+		return nil, err
+	}
+	t.Counterpart = cp
+	return t, nil
+}
+
 func (s *TransactionService) List(ctx context.Context, in ListTransactionsInput) ([]models.Transaction, error) {
 	return s.repo.Transactions.List(ctx, repo.TransactionFilter{
 		HouseholdID:       in.HouseholdID,
@@ -298,10 +319,6 @@ func (s *TransactionService) PairTransfers(ctx context.Context, householdID mode
 		case models.TransactionTypeIncome:
 			b.incomes = append(b.incomes, r)
 		}
-	}
-
-	for _, v := range buckets {
-		fmt.Println(v.expenses, v.incomes)
 	}
 
 	paired := 0

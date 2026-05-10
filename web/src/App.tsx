@@ -10,6 +10,7 @@ import { Register } from './pages/Register'
 import { TransactionsList } from './pages/Transactions/List'
 import { NewTransaction } from './pages/Transactions/New'
 import { EditTransaction } from './pages/Transactions/Edit'
+import { TransactionDetail } from './pages/Transactions/Detail'
 import { CreateTransfer } from './pages/Transactions/Transfer'
 import { AccountsList } from './pages/Accounts/List'
 import { NewAccount } from './pages/Accounts/New'
@@ -63,6 +64,14 @@ export default function App() {
             element={
               <Protected>
                 <CreateTransfer />
+              </Protected>
+            }
+          />
+          <Route
+            path="/transactions/:id"
+            element={
+              <Protected>
+                <TransactionDetail />
               </Protected>
             }
           />
