@@ -66,7 +66,7 @@ func (r *Router) createTransaction(c *gin.Context) {
 		OccurredAt:     req.OccurredAt,
 		Description:    req.Description,
 		Merchant:       req.Merchant,
-		CategoryID:     (*models.ID)(req.CategoryID),
+		CategoryID:     req.CategoryID,
 		IdempotencyKey: c.GetHeader("Idempotency-Key"),
 		CreatedBy:      uid,
 	})
@@ -104,87 +104,10 @@ func (r *Router) createTransfer(c *gin.Context) {
 
 func (r *Router) listTransactions(c *gin.Context) {
 	hid := middleware.MustHouseholdID(c)
-	in := service.ListTransactionsInput{HouseholdID: hid}
-
-	if v := c.Query("from"); v != "" {
-		t, err := time.Parse(time.RFC3339, v)
-		if err != nil {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.From = &t
-	}
-	if v := c.Query("to"); v != "" {
-		t, err := time.Parse(time.RFC3339, v)
-		if err != nil {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.To = &t
-	}
-	if v := c.Query("category_id"); v != "" {
-		id, err := uuid.Parse(v)
-		if err != nil {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.CategoryID = &id
-	}
-	if v := c.Query("account_id"); v != "" {
-		id, err := uuid.Parse(v)
-		if err != nil {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.AccountID = &id
-	}
-	if v := c.Query("type"); v != "" {
-		t := models.TransactionType(v)
-		in.Type = &t
-	}
-	if c.Query("uncategorized") == "true" {
-		in.UncategorizedOnly = true
-	}
-	in.Search = strings.TrimSpace(c.Query("q"))
-	if v := c.Query("amount_min"); v != "" {
-		d, err := decimal.NewFromString(v)
-		if err != nil {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.AmountMin = &d
-	}
-	if v := c.Query("amount_max"); v != "" {
-		d, err := decimal.NewFromString(v)
-		if err != nil {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.AmountMax = &d
-	}
-	if v := c.Query("limit"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil || n <= 0 {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.Limit = n
-	}
-	if v := c.Query("cursor_id"); v != "" {
-		id, err := uuid.Parse(v)
-		if err != nil {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.CursorID = &id
-	}
-	if v := c.Query("cursor_at"); v != "" {
-		t, err := time.Parse(time.RFC3339, v)
-		if err != nil {
-			middleware.Respond(c, service.ErrInvalidInput)
-			return
-		}
-		in.CursorOccurredAt = &t
+	in, err := buildListTransactionsInput(c, hid)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
 	}
 
 	transactions, err := r.svc.Transactions.List(c.Request.Context(), in)
@@ -199,6 +122,97 @@ func (r *Router) listTransactions(c *gin.Context) {
 		resp.NextCursor = &cursor{ID: last.ID, OccurredAt: last.OccurredAt}
 	}
 	ok(c, resp)
+}
+
+// buildListTransactionsInput parses the GET /transactions query string
+// into the service input. Returns service.ErrInvalidInput on any badly
+// formatted value so the handler can map it via middleware.Respond.
+func buildListTransactionsInput(c *gin.Context, hid models.ID) (service.ListTransactionsInput, error) {
+	in := service.ListTransactionsInput{HouseholdID: hid}
+	var err error
+
+	if in.From, err = queryTime(c, "from"); err != nil {
+		return in, err
+	}
+	if in.To, err = queryTime(c, "to"); err != nil {
+		return in, err
+	}
+	if in.CategoryID, err = queryUUID(c, "category_id"); err != nil {
+		return in, err
+	}
+	if in.AccountID, err = queryUUID(c, "account_id"); err != nil {
+		return in, err
+	}
+	if v := c.Query("type"); v != "" {
+		t := models.TransactionType(v)
+		in.Type = &t
+	}
+	in.UncategorizedOnly = c.Query("uncategorized") == "true"
+	in.Search = strings.TrimSpace(c.Query("q"))
+	if in.AmountMin, err = queryDecimal(c, "amount_min"); err != nil {
+		return in, err
+	}
+	if in.AmountMax, err = queryDecimal(c, "amount_max"); err != nil {
+		return in, err
+	}
+	if in.Limit, err = queryPositiveInt(c, "limit"); err != nil {
+		return in, err
+	}
+	if in.CursorID, err = queryUUID(c, "cursor_id"); err != nil {
+		return in, err
+	}
+	if in.CursorOccurredAt, err = queryTime(c, "cursor_at"); err != nil {
+		return in, err
+	}
+	return in, nil
+}
+
+func queryTime(c *gin.Context, key string) (*time.Time, error) {
+	v := c.Query(key)
+	if v == "" {
+		return nil, nil //nolint:nilnil // optional query param
+	}
+	t, err := time.Parse(time.RFC3339, v)
+	if err != nil {
+		return nil, service.ErrInvalidInput
+	}
+	return &t, nil
+}
+
+func queryUUID(c *gin.Context, key string) (*models.ID, error) {
+	v := c.Query(key)
+	if v == "" {
+		return nil, nil //nolint:nilnil // optional query param
+	}
+	id, err := uuid.Parse(v)
+	if err != nil {
+		return nil, service.ErrInvalidInput
+	}
+	return &id, nil
+}
+
+func queryDecimal(c *gin.Context, key string) (*decimal.Decimal, error) {
+	v := c.Query(key)
+	if v == "" {
+		return nil, nil //nolint:nilnil // optional query param
+	}
+	d, err := decimal.NewFromString(v)
+	if err != nil {
+		return nil, service.ErrInvalidInput
+	}
+	return &d, nil
+}
+
+func queryPositiveInt(c *gin.Context, key string) (int, error) {
+	v := c.Query(key)
+	if v == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		return 0, service.ErrInvalidInput
+	}
+	return n, nil
 }
 
 func (r *Router) getTransaction(c *gin.Context) {
@@ -236,7 +250,7 @@ func (r *Router) updateTransaction(c *gin.Context) {
 		Amount:      req.Amount,
 		Description: req.Description,
 		Merchant:    req.Merchant,
-		CategoryID:  (*models.ID)(req.CategoryID),
+		CategoryID:  req.CategoryID,
 		UpdatedBy:   uid,
 	})
 	if err != nil {

@@ -57,7 +57,7 @@ migrate-force:
 install-tools: install-lint install-migrate
 
 install-lint:
-	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
 install-migrate:
 	GOBIN=$(BIN_DIR) go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest

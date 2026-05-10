@@ -13,6 +13,12 @@ func ok(c *gin.Context, body any) {
 	c.JSON(http.StatusOK, body)
 }
 
+// okRows wraps an analytics row slice in the standard `{"rows": ...}`
+// envelope. Centralized so the literal key is not repeated.
+func okRows(c *gin.Context, rows any) {
+	c.JSON(http.StatusOK, gin.H{"rows": rows})
+}
+
 func created(c *gin.Context, body any) {
 	c.JSON(http.StatusCreated, body)
 }

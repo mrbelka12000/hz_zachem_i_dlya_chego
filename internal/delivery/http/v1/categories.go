@@ -5,7 +5,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/mrbelka12000/hz_zachem/internal/delivery/http/middleware"
-	"github.com/mrbelka12000/hz_zachem/internal/models"
 	"github.com/mrbelka12000/hz_zachem/internal/service"
 )
 
@@ -36,7 +35,7 @@ func (r *Router) createCategory(c *gin.Context) {
 	uid := middleware.MustUserID(c)
 	cat, err := r.svc.Categories.Create(c.Request.Context(), service.CreateCategoryInput{
 		HouseholdID: hid,
-		ParentID:    (*models.ID)(req.ParentID),
+		ParentID:    req.ParentID,
 		Name:        req.Name,
 		Icon:        req.Icon,
 		Color:       req.Color,
@@ -79,7 +78,7 @@ func (r *Router) updateCategory(c *gin.Context) {
 	cat, err := r.svc.Categories.Update(c.Request.Context(), service.UpdateCategoryInput{
 		HouseholdID: hid,
 		ID:          id,
-		ParentID:    (*models.ID)(req.ParentID),
+		ParentID:    req.ParentID,
 		Name:        req.Name,
 		Icon:        req.Icon,
 		Color:       req.Color,

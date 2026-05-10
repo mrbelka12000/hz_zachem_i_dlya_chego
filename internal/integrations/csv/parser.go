@@ -123,7 +123,7 @@ func validateHeader(got []string) error {
 	return nil
 }
 
-func parseRow(rec []string) (ParsedRow, string) {
+func parseRow(rec []string) (row ParsedRow, errMsg string) {
 	if len(rec) < 4 {
 		return ParsedRow{}, "expected 4 columns"
 	}

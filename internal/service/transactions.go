@@ -129,7 +129,7 @@ func (s *TransactionService) Create(ctx context.Context, in CreateTransactionInp
 	return t, nil
 }
 
-func (s *TransactionService) CreateTransfer(ctx context.Context, in CreateTransferInput) (*models.Transaction, *models.Transaction, error) {
+func (s *TransactionService) CreateTransfer(ctx context.Context, in CreateTransferInput) (expense, income *models.Transaction, err error) {
 	if in.FromAccountID == in.ToAccountID {
 		return nil, nil, ErrTransferSameAccount
 	}
@@ -153,7 +153,7 @@ func (s *TransactionService) CreateTransfer(ctx context.Context, in CreateTransf
 	desc := strings.TrimSpace(in.Description)
 	out := models.TransferDirectionOut
 	inDir := models.TransferDirectionIn
-	expense := &models.Transaction{
+	expense = &models.Transaction{
 		HouseholdID:       in.HouseholdID,
 		AccountID:         in.FromAccountID,
 		Type:              models.TransactionTypeTransfer,
@@ -165,7 +165,7 @@ func (s *TransactionService) CreateTransfer(ctx context.Context, in CreateTransf
 		Source:            models.TransactionSourceManual,
 		CreatedBy:         in.CreatedBy,
 	}
-	income := &models.Transaction{
+	income = &models.Transaction{
 		HouseholdID:       in.HouseholdID,
 		AccountID:         in.ToAccountID,
 		Type:              models.TransactionTypeTransfer,
@@ -177,8 +177,8 @@ func (s *TransactionService) CreateTransfer(ctx context.Context, in CreateTransf
 		Source:            models.TransactionSourceManual,
 		CreatedBy:         in.CreatedBy,
 	}
-	if err := s.repo.Transactions.CreateTransfer(ctx, expense, income); err != nil {
-		return nil, nil, err
+	if cerr := s.repo.Transactions.CreateTransfer(ctx, expense, income); cerr != nil {
+		return nil, nil, cerr
 	}
 	return expense, income, nil
 }
@@ -327,9 +327,10 @@ func categorySourceForUpdate(categoryID *models.ID) models.CategorySource {
 // merges each unambiguous pair into a transfer.
 //
 // Match rule: same calendar day in the household timezone, same amount,
-// same currency, different accounts. A bucket only counts when it has
-// exactly one expense and exactly one income — anything else is left
-// alone so the user can pair manually.
+// same currency, different accounts. Pairing happens element-wise when
+// the bucket is balanced and all expenses sit on one account while all
+// incomes sit on a different one — anything else is left alone so the
+// user can pair manually.
 func (s *TransactionService) PairTransfers(ctx context.Context, householdID models.ID) (int, error) {
 	h, err := s.households.Get(ctx, householdID)
 	if err != nil {
@@ -345,25 +346,86 @@ func (s *TransactionService) PairTransfers(ctx context.Context, householdID mode
 		return 0, err
 	}
 
-	type bucketKey struct {
-		day      string
-		amount   string
-		currency string
+	buckets := groupTransfersByBucket(rows, loc)
+
+	paired := 0
+	for _, b := range buckets {
+		if !b.canAutoPair() {
+			continue
+		}
+		b.sortLegs()
+		n, err := s.pairBucket(ctx, householdID, b)
+		paired += n
+		if err != nil {
+			return paired, err
+		}
 	}
-	type bucket struct {
-		expenses []models.Transaction
-		incomes  []models.Transaction
+	return paired, nil
+}
+
+type pairBucketKey struct {
+	day      string
+	amount   string
+	currency string
+}
+
+type pairBucket struct {
+	expenses []models.Transaction
+	incomes  []models.Transaction
+}
+
+// canAutoPair holds when the bucket is balanced and the expenses /
+// incomes sit on a single (different) account each. Anything else is
+// ambiguous and left for manual pairing.
+func (b *pairBucket) canAutoPair() bool {
+	if len(b.expenses) == 0 || len(b.expenses) != len(b.incomes) {
+		return false
 	}
-	buckets := map[bucketKey]*bucket{}
+	expAcc := b.expenses[0].AccountID
+	incAcc := b.incomes[0].AccountID
+	if expAcc == incAcc {
+		return false
+	}
+	for _, e := range b.expenses {
+		if e.AccountID != expAcc {
+			return false
+		}
+	}
+	for _, i := range b.incomes {
+		if i.AccountID != incAcc {
+			return false
+		}
+	}
+	return true
+}
+
+// sortLegs orders both slices by (occurred_at, id) so the same input
+// yields the same pairings deterministically across runs.
+func (b *pairBucket) sortLegs() {
+	sortByOccurredThenID(b.expenses)
+	sortByOccurredThenID(b.incomes)
+}
+
+func sortByOccurredThenID(rows []models.Transaction) {
+	sort.Slice(rows, func(i, j int) bool {
+		if !rows[i].OccurredAt.Equal(rows[j].OccurredAt) {
+			return rows[i].OccurredAt.Before(rows[j].OccurredAt)
+		}
+		return rows[i].ID.String() < rows[j].ID.String()
+	})
+}
+
+func groupTransfersByBucket(rows []models.Transaction, loc *time.Location) map[pairBucketKey]*pairBucket {
+	buckets := map[pairBucketKey]*pairBucket{}
 	for _, r := range rows {
-		k := bucketKey{
+		k := pairBucketKey{
 			day:      r.OccurredAt.In(loc).Format("2006-01-02"),
 			amount:   r.Amount.String(),
 			currency: r.Currency,
 		}
 		b := buckets[k]
 		if b == nil {
-			b = &bucket{}
+			b = &pairBucket{}
 			buckets[k] = b
 		}
 		switch r.Type {
@@ -373,69 +435,26 @@ func (s *TransactionService) PairTransfers(ctx context.Context, householdID mode
 			b.incomes = append(b.incomes, r)
 		}
 	}
+	return buckets
+}
 
+// pairBucket persists one bucket's pairings, returning the count of
+// transfers actually created. Conflicts are skipped (idempotent retry);
+// any other error aborts.
+func (s *TransactionService) pairBucket(ctx context.Context, householdID models.ID, b *pairBucket) (int, error) {
 	paired := 0
-	for _, b := range buckets {
-		// We pair element-wise when:
-		//   * the bucket is balanced (same number of expenses and incomes),
-		//   * all expenses are on a single account,
-		//   * all incomes are on a single (different) account.
-		// Anything else stays unpaired so the user can resolve it manually.
-		if len(b.expenses) == 0 || len(b.expenses) != len(b.incomes) {
-			continue
+	for k := range b.expenses {
+		transferID, err := uuid.NewRandom()
+		if err != nil {
+			return paired, err
 		}
-		expAcc := b.expenses[0].AccountID
-		incAcc := b.incomes[0].AccountID
-		if expAcc == incAcc {
-			continue
+		if err := s.repo.Transactions.PairAsTransfer(ctx, householdID, b.expenses[k].ID, b.incomes[k].ID, transferID); err != nil {
+			if errors.Is(err, repo.ErrConflict) {
+				continue
+			}
+			return paired, err
 		}
-		ambiguous := false
-		for _, e := range b.expenses {
-			if e.AccountID != expAcc {
-				ambiguous = true
-				break
-			}
-		}
-		if !ambiguous {
-			for _, i := range b.incomes {
-				if i.AccountID != incAcc {
-					ambiguous = true
-					break
-				}
-			}
-		}
-		if ambiguous {
-			continue
-		}
-
-		// Stable order: occurred_at then id, so the same input yields the
-		// same pairings deterministically across runs.
-		sort.Slice(b.expenses, func(i, j int) bool {
-			if !b.expenses[i].OccurredAt.Equal(b.expenses[j].OccurredAt) {
-				return b.expenses[i].OccurredAt.Before(b.expenses[j].OccurredAt)
-			}
-			return b.expenses[i].ID.String() < b.expenses[j].ID.String()
-		})
-		sort.Slice(b.incomes, func(i, j int) bool {
-			if !b.incomes[i].OccurredAt.Equal(b.incomes[j].OccurredAt) {
-				return b.incomes[i].OccurredAt.Before(b.incomes[j].OccurredAt)
-			}
-			return b.incomes[i].ID.String() < b.incomes[j].ID.String()
-		})
-
-		for k := range b.expenses {
-			transferID, err := uuid.NewRandom()
-			if err != nil {
-				return paired, err
-			}
-			if err := s.repo.Transactions.PairAsTransfer(ctx, householdID, b.expenses[k].ID, b.incomes[k].ID, transferID); err != nil {
-				if errors.Is(err, repo.ErrConflict) {
-					continue
-				}
-				return paired, err
-			}
-			paired++
-		}
+		paired++
 	}
 	return paired, nil
 }

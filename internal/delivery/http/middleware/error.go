@@ -23,7 +23,7 @@ func Respond(c *gin.Context, err error) {
 	c.AbortWithStatusJSON(status, ErrorBody{Error: ErrorDetail{Code: code, Message: err.Error()}})
 }
 
-func classify(err error) (int, string) {
+func classify(err error) (status int, code string) {
 	switch {
 	case errors.Is(err, service.ErrInvalidInput):
 		return http.StatusBadRequest, "invalid_input"

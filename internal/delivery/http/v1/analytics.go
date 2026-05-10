@@ -23,7 +23,7 @@ func (r *Router) spendingByCategory(c *gin.Context) {
 		middleware.Respond(c, err)
 		return
 	}
-	ok(c, gin.H{"rows": rows})
+	okRows(c, rows)
 }
 
 func (r *Router) spendingByMonth(c *gin.Context) {
@@ -42,7 +42,7 @@ func (r *Router) spendingByMonth(c *gin.Context) {
 		middleware.Respond(c, err)
 		return
 	}
-	ok(c, gin.H{"rows": rows})
+	okRows(c, rows)
 }
 
 func (r *Router) topMerchants(c *gin.Context) {
@@ -66,7 +66,7 @@ func (r *Router) topMerchants(c *gin.Context) {
 		middleware.Respond(c, err)
 		return
 	}
-	ok(c, gin.H{"rows": rows})
+	okRows(c, rows)
 }
 
 func (r *Router) incomeByCategory(c *gin.Context) {
@@ -81,7 +81,7 @@ func (r *Router) incomeByCategory(c *gin.Context) {
 		middleware.Respond(c, err)
 		return
 	}
-	ok(c, gin.H{"rows": rows})
+	okRows(c, rows)
 }
 
 func (r *Router) cashflowByMonth(c *gin.Context) {
@@ -107,7 +107,7 @@ func (r *Router) cashflowByMonth(c *gin.Context) {
 			middleware.Respond(c, err)
 			return
 		}
-		ok(c, gin.H{"rows": rows})
+		okRows(c, rows)
 		return
 	}
 
@@ -116,20 +116,20 @@ func (r *Router) cashflowByMonth(c *gin.Context) {
 		middleware.Respond(c, err)
 		return
 	}
-	ok(c, gin.H{"rows": rows})
+	okRows(c, rows)
 }
 
-func parseRange(c *gin.Context) (time.Time, time.Time, error) {
+func parseRange(c *gin.Context) (from, to time.Time, err error) {
 	fromStr := c.Query("from")
 	toStr := c.Query("to")
 	if fromStr == "" || toStr == "" {
 		return time.Time{}, time.Time{}, service.ErrInvalidInput
 	}
-	from, err := time.Parse(time.RFC3339, fromStr)
+	from, err = time.Parse(time.RFC3339, fromStr)
 	if err != nil {
 		return time.Time{}, time.Time{}, service.ErrInvalidInput
 	}
-	to, err := time.Parse(time.RFC3339, toStr)
+	to, err = time.Parse(time.RFC3339, toStr)
 	if err != nil {
 		return time.Time{}, time.Time{}, service.ErrInvalidInput
 	}

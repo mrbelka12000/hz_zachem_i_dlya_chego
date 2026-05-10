@@ -48,57 +48,51 @@ func (r *Router) Init() *gin.Engine {
 	engine.GET("/readyz", r.readyz)
 
 	api := engine.Group("/v1")
-	{
-		auth := api.Group("/auth")
-		{
-			auth.POST("/register", r.register)
-			auth.POST("/login", r.login)
-			auth.POST("/refresh", r.refresh)
-			auth.POST("/logout", r.logout)
-		}
 
-		protected := api.Group("")
-		protected.Use(middleware.Auth(r.svc))
-		{
-			protected.GET("/me", r.me)
-		}
+	auth := api.Group("/auth")
+	auth.POST("/register", r.register)
+	auth.POST("/login", r.login)
+	auth.POST("/refresh", r.refresh)
+	auth.POST("/logout", r.logout)
 
-		scoped := api.Group("")
-		scoped.Use(middleware.Auth(r.svc), middleware.Household(r.svc))
-		{
-			scoped.GET("/accounts", r.listAccounts)
-			scoped.POST("/accounts", r.createAccount)
-			scoped.GET("/accounts/:id", r.getAccount)
-			scoped.GET("/accounts/:id/balance", r.getAccountBalance)
-			scoped.PUT("/accounts/:id", r.updateAccount)
-			scoped.PATCH("/accounts/:id/archive", r.archiveAccount)
-			scoped.PATCH("/accounts/:id/unarchive", r.unarchiveAccount)
-			scoped.DELETE("/accounts/:id", r.deleteAccount)
+	protected := api.Group("")
+	protected.Use(middleware.Auth(r.svc))
+	protected.GET("/me", r.me)
 
-			scoped.GET("/categories", r.listCategories)
-			scoped.POST("/categories", r.createCategory)
-			scoped.GET("/categories/:id", r.getCategory)
-			scoped.PUT("/categories/:id", r.updateCategory)
-			scoped.DELETE("/categories/:id", r.deleteCategory)
+	scoped := api.Group("")
+	scoped.Use(middleware.Auth(r.svc), middleware.Household(r.svc))
 
-			scoped.GET("/transactions", r.listTransactions)
-			scoped.POST("/transactions", r.createTransaction)
-			scoped.POST("/transactions/transfer", r.createTransfer)
-			scoped.POST("/transactions/pair-transfers", r.pairTransfers)
-			scoped.GET("/transactions/:id", r.getTransaction)
-			scoped.PUT("/transactions/:id", r.updateTransaction)
-			scoped.POST("/transactions/:id/unpair", r.unpairTransfer)
-			scoped.DELETE("/transactions/:id", r.deleteTransaction)
+	scoped.GET("/accounts", r.listAccounts)
+	scoped.POST("/accounts", r.createAccount)
+	scoped.GET("/accounts/:id", r.getAccount)
+	scoped.GET("/accounts/:id/balance", r.getAccountBalance)
+	scoped.PUT("/accounts/:id", r.updateAccount)
+	scoped.PATCH("/accounts/:id/archive", r.archiveAccount)
+	scoped.PATCH("/accounts/:id/unarchive", r.unarchiveAccount)
+	scoped.DELETE("/accounts/:id", r.deleteAccount)
 
-			scoped.GET("/analytics/spending-by-category", r.spendingByCategory)
-			scoped.GET("/analytics/spending-by-month", r.spendingByMonth)
-			scoped.GET("/analytics/top-merchants", r.topMerchants)
-			scoped.GET("/analytics/income-by-category", r.incomeByCategory)
-			scoped.GET("/analytics/cashflow-by-month", r.cashflowByMonth)
+	scoped.GET("/categories", r.listCategories)
+	scoped.POST("/categories", r.createCategory)
+	scoped.GET("/categories/:id", r.getCategory)
+	scoped.PUT("/categories/:id", r.updateCategory)
+	scoped.DELETE("/categories/:id", r.deleteCategory)
 
-			scoped.POST("/imports/csv", r.importCSV)
-		}
-	}
+	scoped.GET("/transactions", r.listTransactions)
+	scoped.POST("/transactions", r.createTransaction)
+	scoped.POST("/transactions/transfer", r.createTransfer)
+	scoped.POST("/transactions/pair-transfers", r.pairTransfers)
+	scoped.GET("/transactions/:id", r.getTransaction)
+	scoped.PUT("/transactions/:id", r.updateTransaction)
+	scoped.POST("/transactions/:id/unpair", r.unpairTransfer)
+	scoped.DELETE("/transactions/:id", r.deleteTransaction)
+
+	scoped.GET("/analytics/spending-by-category", r.spendingByCategory)
+	scoped.GET("/analytics/spending-by-month", r.spendingByMonth)
+	scoped.GET("/analytics/top-merchants", r.topMerchants)
+	scoped.GET("/analytics/income-by-category", r.incomeByCategory)
+	scoped.GET("/analytics/cashflow-by-month", r.cashflowByMonth)
+
+	scoped.POST("/imports/csv", r.importCSV)
 
 	mountSPA(engine)
 

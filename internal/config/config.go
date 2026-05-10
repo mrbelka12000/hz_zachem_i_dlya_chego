@@ -86,7 +86,7 @@ func Load() (*Config, error) {
 }
 
 func loadFromFile(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304,G703 -- path is the operator-supplied CONFIG_PATH, not user input
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
