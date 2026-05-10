@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/qazevent/<service_name>/internal/repo"
+	"github.com/qazevent/hz_zachem/internal/repo"
 )
 
 type Service struct {

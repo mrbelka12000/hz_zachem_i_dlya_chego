@@ -123,11 +123,11 @@ jobs:
 
       - name: Docker build
         run: |
-          docker build -f build/Dockerfile -t ghcr.io/$OWNER/<service_name>:prod .
+          docker build -f build/Dockerfile -t ghcr.io/$OWNER/hz_zachem:prod .
 
       - name: Docker push
         run: |
-          docker push ghcr.io/$OWNER/<service_name>:prod
+          docker push ghcr.io/$OWNER/hz_zachem:prod
 
       - name: Setup SSH
         run: |
@@ -139,7 +139,7 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/<service_name>:prod <service_name>"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/hz_zachem:prod hz_zachem"
 
   deploy-dev:
     name: Deploy to Development
@@ -161,11 +161,11 @@ jobs:
 
       - name: Docker build
         run: |
-          docker build -f build/Dockerfile -t ghcr.io/$OWNER/<service_name>:dev .
+          docker build -f build/Dockerfile -t ghcr.io/$OWNER/hz_zachem .
 
       - name: Docker push
         run: |
-          docker push ghcr.io/$OWNER/<service_name>:dev
+          docker push ghcr.io/$OWNER/hz_zachem
 
       - name: Setup SSH
         run: |
@@ -177,5 +177,5 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/<service_name>:dev <service_name>_dev"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/hz_zachem hz_zachem"
           

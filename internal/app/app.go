@@ -14,15 +14,15 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
-	"github.com/qazevent/<service_name>/internal/config"
-	v1 "github.com/qazevent/<service_name>/internal/delivery/http/v1"
-	"github.com/qazevent/<service_name>/internal/producer"
-	"github.com/qazevent/<service_name>/internal/repo"
-	"github.com/qazevent/<service_name>/internal/service"
-	"github.com/qazevent/<service_name>/migrations"
-	"github.com/qazevent/<service_name>/pkg/postgres"
-	"github.com/qazevent/<service_name>/pkg/rabbitmq"
-	"github.com/qazevent/<service_name>/pkg/server"
+	"github.com/qazevent/hz_zachem/internal/config"
+	v1 "github.com/qazevent/hz_zachem/internal/delivery/http/v1"
+	"github.com/qazevent/hz_zachem/internal/producer"
+	"github.com/qazevent/hz_zachem/internal/repo"
+	"github.com/qazevent/hz_zachem/internal/service"
+	"github.com/qazevent/hz_zachem/migrations"
+	"github.com/qazevent/hz_zachem/pkg/postgres"
+	"github.com/qazevent/hz_zachem/pkg/rabbitmq"
+	"github.com/qazevent/hz_zachem/pkg/server"
 )
 
 func Run() {
@@ -73,8 +73,6 @@ func Run() {
 			return
 		}
 	}()
-
-	// TODO: initialize workers and start processing
 
 	log.Println("application started")
 	<-ctx.Done()

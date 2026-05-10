@@ -1,7 +1,7 @@
 .PHONY: build run test lint migrate-up migrate-down migrate-create install-tools clean \
        infra-up infra-down infra-logs infra-ps
 
-SERVICE_NAME ?= <service_name>
+SERVICE_NAME ?= hz_zachem
 MIGRATIONS_DIR = migrations
 POSTGRES_DSN ?= postgres://postgres:postgres@localhost:5432/$(SERVICE_NAME)_storage?sslmode=disable
 BIN_DIR = $(CURDIR)/bin

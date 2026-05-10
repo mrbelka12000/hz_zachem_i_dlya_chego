@@ -1,4 +1,4 @@
-# <service_name>
+# hz_zachem
 
 Шаблон микросервиса для QazEvent.
 
@@ -11,18 +11,18 @@ cp -r template my-new-service
 cd my-new-service
 ```
 
-### 2. Заменить `<service_name>` на имя сервиса
+### 2. Заменить `hz_zachem` на имя сервиса
 
 ```bash
 # Linux
-find . -type f -name "*.go" -exec sed -i 's/<service_name>/my-new-service/g' {} +
-find . -type f -name "*.md" -exec sed -i 's/<service_name>/my-new-service/g' {} +
-find . -type f -name "*.yml" -exec sed -i 's/<service_name>/my-new-service/g' {} +
+find . -type f -name "*.go" -exec sed -i 's/hz_zachem/my-new-service/g' {} +
+find . -type f -name "*.md" -exec sed -i 's/hz_zachem/my-new-service/g' {} +
+find . -type f -name "*.yml" -exec sed -i 's/hz_zachem/my-new-service/g' {} +
 
 # macOS
-find . -type f -name "*.go" -exec sed -i '' 's/<service_name>/my-new-service/g' {} +
-find . -type f -name "*.md" -exec sed -i '' 's/<service_name>/my-new-service/g' {} +
-find . -type f -name "*.yml" -exec sed -i '' 's/<service_name>/my-new-service/g' {} +
+find . -type f -name "*.go" -exec sed -i '' 's/hz_zachem/my-new-service/g' {} +
+find . -type f -name "*.md" -exec sed -i '' 's/hz_zachem/my-new-service/g' {} +
+find . -type f -name "*.yml" -exec sed -i '' 's/hz_zachem/my-new-service/g' {} +
 ```
 
 ### 3. Инициализировать git репозиторий
@@ -184,7 +184,7 @@ GitHub Actions автоматически:
 | `POSTGRES_PORT` | 5432 | Порт PostgreSQL |
 | `POSTGRES_USER` | postgres | Пользователь PostgreSQL |
 | `POSTGRES_PASSWORD` | postgres | Пароль PostgreSQL |
-| `POSTGRES_DB` | <service_name>_storage | База данных |
+| `POSTGRES_DB` | hz_zachem_storage | База данных |
 | `POSTGRES_SSLMODE` | disable | SSL режим |
 | `RABBITMQ_URL` | amqp://guest:guest@localhost:5672/ | URL RabbitMQ |
 | `RABBITMQ_EXCHANGE` | events | Exchange |

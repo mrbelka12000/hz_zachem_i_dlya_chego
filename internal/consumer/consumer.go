@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/qazevent/hz_zachem/pkg/rabbitmq"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/qazevent/<service_name>/pkg/rabbitmq"
 )
 
 type Handler func(ctx context.Context, msg []byte) error

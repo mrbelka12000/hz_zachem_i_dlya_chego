@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/qazevent/<service_name>/internal/service"
+	"github.com/qazevent/hz_zachem/internal/service"
 )
 
 type Router struct {

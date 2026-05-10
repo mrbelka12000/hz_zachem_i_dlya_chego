@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/qazevent/<service_name>/pkg/rabbitmq"
+	"github.com/qazevent/hz_zachem/pkg/rabbitmq"
 )
 
 type Producer struct {

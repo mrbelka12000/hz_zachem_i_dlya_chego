@@ -1,6 +1,6 @@
 package main
 
-import "github.com/qazevent/<service_name>/internal/app"
+import "github.com/qazevent/hz_zachem/internal/app"
 
 func main() {
 	app.Run()

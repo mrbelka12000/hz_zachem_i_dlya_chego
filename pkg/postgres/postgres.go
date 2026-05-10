@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/qazevent/<service_name>/internal/config"
+	"github.com/qazevent/hz_zachem/internal/config"
 )
 
 func New(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, error) {

@@ -1,25 +1,25 @@
 # Docker Compose for local development
 # Usage: docker compose -f deployment/docker-compose.yml up -d
 #
-# Before using, replace <service_name> with your actual service name
+# Before using, replace hz_zachem with your actual service name
 # or set SERVICE_NAME environment variable
 
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: <service_name>_postgres
+    container_name: hz_zachem_postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: <service_name>_storage
+      POSTGRES_DB: hz_zachem_storage
     ports:
       - "5432:5432"
     volumes:
-      - <service_name>_postgres_data:/var/lib/postgresql/data
+      - hz_zachem_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d <service_name>_storage"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hz_zachem_storage"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,7 +30,7 @@ services:
   # RabbitMQ Message Broker
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
-    container_name: <service_name>_rabbitmq
+    container_name: hz_zachem_rabbitmq
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: guest
@@ -53,7 +53,7 @@ services:
   # Redis Cache (optional)
   redis:
     image: redis:7-alpine
-    container_name: <service_name>_redis
+    container_name: hz_zachem_redis
     restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
@@ -71,7 +71,7 @@ services:
       - with-redis  # Redis is optional, use: docker compose --profile with-redis up
 
 volumes:
-  <service_name>_postgres_data:
+  hz_zachem_postgres_data:
     driver: local
   rabbitmq_data:
     driver: local

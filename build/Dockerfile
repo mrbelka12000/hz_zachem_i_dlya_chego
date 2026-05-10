@@ -1,5 +1,5 @@
 ## Build
-FROM golang:1.24-alpine AS buildenv
+FROM golang:1.25-alpine AS buildenv
 
 ADD go.mod go.sum /
 
@@ -11,7 +11,7 @@ ADD . .
 
 ENV GO111MODULE=on
 
-RUN go build -o <service_name> cmd/main.go
+RUN go build -o hz_zachem cmd/main.go
 
 ## Deploy
 FROM alpine
@@ -25,4 +25,4 @@ COPY --from=buildenv /app/ /
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/healthz || exit 1
 
-CMD ["/<service_name>"]
+CMD ["/hz_zachem"]

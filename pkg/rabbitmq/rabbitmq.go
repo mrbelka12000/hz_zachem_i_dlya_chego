@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/qazevent/hz_zachem/internal/config"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/qazevent/<service_name>/internal/config"
 )
 
 type Client struct {
