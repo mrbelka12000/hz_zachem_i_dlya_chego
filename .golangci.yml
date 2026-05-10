@@ -1,0 +1,90 @@
+run:
+  concurrency: 4
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - funlen
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - noctx
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+    - errorlint
+    - nilerr
+    - nilnil
+    - gocognit
+    - prealloc
+
+linters-settings:
+  nilnil:
+    checked-types:
+      - chan
+      - func
+      - iface
+      - ptr
+      - uintptr
+      - unsafeptr
+  gocognit:
+    min-complexity: 30
+  dupl:
+    threshold: 100
+  funlen:
+    lines: 100
+    statements: 50
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  gocritic:
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - style
+  gocyclo:
+    min-complexity: 15
+  govet:
+    settings:
+      printf:
+        funcs:
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+  lll:
+    line-length: 140
+  misspell:
+    locale: US
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - funlen
+        - gocognit
+    - path: pkg/golinters/errcheck.go
+      text: 'SA1019: errCfg.Exclude is deprecated: use ExcludeFunctions instead'
+    - path: pkg/commands/run.go
+      text: 'SA1019: lsc.Errcheck.Exclude is deprecated: use ExcludeFunctions instead'
