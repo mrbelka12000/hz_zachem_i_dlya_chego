@@ -44,3 +44,28 @@ func (s *AnalyticsService) TopMerchants(ctx context.Context, householdID models.
 	}
 	return s.repo.Analytics.TopMerchants(ctx, householdID, from, to, limit)
 }
+
+func (s *AnalyticsService) IncomeByCategory(ctx context.Context, householdID models.ID, from, to time.Time) ([]repo.CategorySpendRow, error) {
+	if from.IsZero() || to.IsZero() || !to.After(from) {
+		return nil, ErrInvalidInput
+	}
+	return s.repo.Analytics.IncomeByCategory(ctx, householdID, from, to)
+}
+
+func (s *AnalyticsService) CashflowByMonth(ctx context.Context, householdID models.ID, months int) ([]repo.CashflowMonthRow, error) {
+	if months <= 0 || months > 36 {
+		return nil, ErrInvalidInput
+	}
+	h, err := s.households.Get(ctx, householdID)
+	if err != nil {
+		return nil, err
+	}
+	loc, err := time.LoadLocation(h.Timezone)
+	if err != nil {
+		loc = time.UTC
+	}
+	now := time.Now().In(loc)
+	to := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, loc)
+	from := time.Date(now.Year(), now.Month()-time.Month(months-1), 1, 0, 0, 0, 0, loc)
+	return s.repo.Analytics.CashflowByMonth(ctx, householdID, h.Timezone, from, to)
+}

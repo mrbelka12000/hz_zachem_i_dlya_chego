@@ -92,6 +92,8 @@ func (r *Router) Init() *gin.Engine {
 			scoped.GET("/analytics/spending-by-category", r.spendingByCategory)
 			scoped.GET("/analytics/spending-by-month", r.spendingByMonth)
 			scoped.GET("/analytics/top-merchants", r.topMerchants)
+			scoped.GET("/analytics/income-by-category", r.incomeByCategory)
+			scoped.GET("/analytics/cashflow-by-month", r.cashflowByMonth)
 
 			scoped.POST("/imports/csv", r.importCSV)
 		}

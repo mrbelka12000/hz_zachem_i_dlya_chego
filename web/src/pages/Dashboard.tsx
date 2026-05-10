@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import Decimal from 'decimal.js'
 
 import { analyticsApi } from '../api/analytics'
 import { transactionsApi } from '../api/transactions'
 import type {
+  CashflowMonthRow,
   CategorySpendRow,
   MerchantSpendRow,
-  MonthSpendRow,
   Transaction,
 } from '../api/types'
 import { currentMonthRange, formatDate, formatMonth } from '../lib/dates'
@@ -22,9 +23,14 @@ export function Dashboard() {
     queryFn: () => analyticsApi.spendingByCategory(range.from, range.to),
   })
 
-  const byMonth = useQuery<MonthSpendRow[]>({
-    queryKey: ['analytics', 'spending-by-month', 6],
-    queryFn: () => analyticsApi.spendingByMonth(6),
+  const incomeByCategory = useQuery<CategorySpendRow[]>({
+    queryKey: ['analytics', 'income-by-category', range],
+    queryFn: () => analyticsApi.incomeByCategory(range.from, range.to),
+  })
+
+  const cashflow = useQuery<CashflowMonthRow[]>({
+    queryKey: ['analytics', 'cashflow-by-month', 6],
+    queryFn: () => analyticsApi.cashflowByMonth(6),
   })
 
   const topMerchants = useQuery<MerchantSpendRow[]>({
@@ -37,7 +43,9 @@ export function Dashboard() {
     queryFn: () => transactionsApi.list({ limit: 10 }),
   })
 
-  const monthTotal = sumMoney((byCategory.data ?? []).map((r) => r.total)).toString()
+  const monthExpenseTotal = sumMoney((byCategory.data ?? []).map((r) => r.total))
+  const monthIncomeTotal = sumMoney((incomeByCategory.data ?? []).map((r) => r.total))
+  const monthNet = monthIncomeTotal.minus(monthExpenseTotal)
 
   return (
     <div className="space-y-6">
@@ -54,21 +62,21 @@ export function Dashboard() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Kpi
           label="Spent this month"
-          value={formatMoney(monthTotal)}
+          value={formatMoney(monthExpenseTotal.toString())}
+          accent="text-red-600"
           loading={byCategory.isPending}
         />
         <Kpi
-          label="Top category"
-          value={byCategory.data?.[0]?.category_name ?? '—'}
-          subtle={
-            byCategory.data?.[0] ? formatMoney(byCategory.data[0].total) : undefined
-          }
-          loading={byCategory.isPending}
+          label="Earned this month"
+          value={formatMoney(monthIncomeTotal.toString())}
+          accent="text-green-700"
+          loading={incomeByCategory.isPending}
         />
         <Kpi
-          label="Recent count"
-          value={recent.data ? String(recent.data.transactions.length) : '—'}
-          loading={recent.isPending}
+          label="Net this month"
+          value={formatMoney(monthNet.toString())}
+          accent={netAccent(monthNet)}
+          loading={byCategory.isPending || incomeByCategory.isPending}
         />
       </section>
 
@@ -89,16 +97,30 @@ export function Dashboard() {
           )}
         </Card>
 
-        <Card title="Spending by month">
-          {byMonth.data && byMonth.data.length === 0 && <Empty>No history yet.</Empty>}
-          {byMonth.data && byMonth.data.length > 0 && (
+        <Card title="Income by category">
+          {incomeByCategory.data && incomeByCategory.data.length === 0 && (
+            <Empty>No income recorded this month yet.</Empty>
+          )}
+          {incomeByCategory.data && incomeByCategory.data.length > 0 && (
             <BarList
-              rows={byMonth.data.map((r) => ({
-                key: r.month,
-                label: formatMonth(r.month),
+              rows={incomeByCategory.data.map((r) => ({
+                key: r.category_id ?? r.category_name,
+                label: r.category_name,
                 value: r.total,
               }))}
+              barClass="bg-green-600"
             />
+          )}
+        </Card>
+      </section>
+
+      <section>
+        <Card title="Cash flow by month">
+          {cashflow.data && cashflow.data.length === 0 && (
+            <Empty>No history yet — import a CSV or add a few transactions.</Empty>
+          )}
+          {cashflow.data && cashflow.data.length > 0 && (
+            <CashflowBars rows={cashflow.data} />
           )}
         </Card>
       </section>
@@ -174,20 +196,34 @@ function Kpi({
   label,
   value,
   subtle,
+  accent,
   loading,
 }: {
   label: string
   value: string
   subtle?: string
+  accent?: string
   loading?: boolean
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{loading ? '…' : value}</p>
+      <p
+        className={
+          'mt-1 text-2xl font-semibold tabular-nums ' + (accent ?? 'text-slate-900')
+        }
+      >
+        {loading ? '…' : value}
+      </p>
       {subtle && <p className="text-xs text-slate-500 mt-0.5">{subtle}</p>}
     </div>
   )
+}
+
+function netAccent(net: Decimal): string {
+  if (net.isPositive() && !net.isZero()) return 'text-green-700'
+  if (net.isNegative()) return 'text-red-600'
+  return 'text-slate-700'
 }
 
 interface BarRow {
@@ -196,7 +232,13 @@ interface BarRow {
   value: string
 }
 
-function BarList({ rows }: { rows: BarRow[] }) {
+function BarList({
+  rows,
+  barClass = 'bg-slate-900',
+}: {
+  rows: BarRow[]
+  barClass?: string
+}) {
   const max = rows.reduce((m, r) => {
     const n = Number(r.value)
     return Number.isFinite(n) && n > m ? n : m
@@ -213,12 +255,82 @@ function BarList({ rows }: { rows: BarRow[] }) {
               <span className="font-medium tabular-nums">{formatMoney(r.value)}</span>
             </div>
             <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-              <div className="h-full bg-slate-900" style={{ width: `${pct}%` }} />
+              <div className={'h-full ' + barClass} style={{ width: `${pct}%` }} />
             </div>
           </li>
         )
       })}
     </ul>
+  )
+}
+
+function CashflowBars({ rows }: { rows: CashflowMonthRow[] }) {
+  const max = rows.reduce((m, r) => {
+    const ex = Number(r.expense)
+    const inc = Number(r.income)
+    return Math.max(m, Number.isFinite(ex) ? ex : 0, Number.isFinite(inc) ? inc : 0)
+  }, 0)
+  return (
+    <ul className="space-y-4">
+      {rows.map((r) => {
+        const ex = Number(r.expense)
+        const inc = Number(r.income)
+        const exPct = max > 0 && ex > 0 ? Math.max(2, Math.round((ex / max) * 100)) : 0
+        const incPct =
+          max > 0 && inc > 0 ? Math.max(2, Math.round((inc / max) * 100)) : 0
+        const net = new Decimal(r.net || '0')
+        return (
+          <li key={r.month} className="space-y-1">
+            <div className="flex items-baseline justify-between text-sm">
+              <span className="text-slate-700 font-medium">{formatMonth(r.month)}</span>
+              <span className={'tabular-nums text-xs ' + netAccent(net)}>
+                net {formatMoney(net.toString())}
+              </span>
+            </div>
+            <Bar
+              label="Income"
+              amount={r.income}
+              pct={incPct}
+              accent="text-green-700"
+              barClass="bg-green-600"
+            />
+            <Bar
+              label="Expense"
+              amount={r.expense}
+              pct={exPct}
+              accent="text-red-600"
+              barClass="bg-red-600"
+            />
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function Bar({
+  label,
+  amount,
+  pct,
+  accent,
+  barClass,
+}: {
+  label: string
+  amount: string
+  pct: number
+  accent: string
+  barClass: string
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-slate-500">{label}</span>
+        <span className={'tabular-nums ' + accent}>{formatMoney(amount)}</span>
+      </div>
+      <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+        <div className={'h-full ' + barClass} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   )
 }
 

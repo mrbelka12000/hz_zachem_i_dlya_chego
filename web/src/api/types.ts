@@ -122,6 +122,13 @@ export interface MerchantSpendRow {
   count: number
 }
 
+export interface CashflowMonthRow {
+  month: string
+  expense: Money
+  income: Money
+  net: Money
+}
+
 export interface TransactionsListResponse {
   transactions: Transaction[]
   next_cursor?: {

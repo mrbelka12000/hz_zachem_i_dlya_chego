@@ -68,6 +68,40 @@ func (r *Router) topMerchants(c *gin.Context) {
 	ok(c, gin.H{"rows": rows})
 }
 
+func (r *Router) incomeByCategory(c *gin.Context) {
+	hid := middleware.MustHouseholdID(c)
+	from, to, err := parseRange(c)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	rows, err := r.svc.Analytics.IncomeByCategory(c.Request.Context(), hid, from, to)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	ok(c, gin.H{"rows": rows})
+}
+
+func (r *Router) cashflowByMonth(c *gin.Context) {
+	hid := middleware.MustHouseholdID(c)
+	months := 6
+	if v := c.Query("months"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			middleware.Respond(c, service.ErrInvalidInput)
+			return
+		}
+		months = n
+	}
+	rows, err := r.svc.Analytics.CashflowByMonth(c.Request.Context(), hid, months)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	ok(c, gin.H{"rows": rows})
+}
+
 func parseRange(c *gin.Context) (time.Time, time.Time, error) {
 	fromStr := c.Query("from")
 	toStr := c.Query("to")
