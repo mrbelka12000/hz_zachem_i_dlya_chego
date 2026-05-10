@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/qazevent/hz_zachem/internal/models"
+	"github.com/mrbelka12000/hz_zachem/internal/models"
 )
 
 const (

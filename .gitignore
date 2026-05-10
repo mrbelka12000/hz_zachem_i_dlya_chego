@@ -34,3 +34,9 @@ bin
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Frontend (web/)
+web/node_modules/
+web/dist/
+web/.vite/
+web/coverage/

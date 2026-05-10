@@ -6,7 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/qazevent/hz_zachem/internal/models"
+	"github.com/mrbelka12000/hz_zachem/internal/models"
 )
 
 type AnalyticsRepo struct {

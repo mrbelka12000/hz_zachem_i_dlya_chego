@@ -1,4 +1,4 @@
-module github.com/qazevent/hz_zachem
+module github.com/mrbelka12000/hz_zachem
 
 go 1.25.7
 

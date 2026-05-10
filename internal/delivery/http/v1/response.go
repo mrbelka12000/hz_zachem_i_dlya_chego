@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/qazevent/hz_zachem/internal/config"
+	"github.com/mrbelka12000/hz_zachem/internal/config"
 )
 
 func ok(c *gin.Context, body any) {

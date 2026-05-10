@@ -3,8 +3,8 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/qazevent/hz_zachem/internal/delivery/http/middleware"
-	"github.com/qazevent/hz_zachem/internal/service"
+	"github.com/mrbelka12000/hz_zachem/internal/delivery/http/middleware"
+	"github.com/mrbelka12000/hz_zachem/internal/service"
 )
 
 type registerRequest struct {

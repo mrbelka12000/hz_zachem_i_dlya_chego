@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/qazevent/hz_zachem/internal/config"
+	"github.com/mrbelka12000/hz_zachem/internal/config"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 

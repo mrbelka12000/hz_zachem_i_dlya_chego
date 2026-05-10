@@ -14,15 +14,15 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
-	"github.com/qazevent/hz_zachem/internal/config"
-	v1 "github.com/qazevent/hz_zachem/internal/delivery/http/v1"
-	"github.com/qazevent/hz_zachem/internal/producer"
-	"github.com/qazevent/hz_zachem/internal/repo"
-	"github.com/qazevent/hz_zachem/internal/service"
-	"github.com/qazevent/hz_zachem/migrations"
-	"github.com/qazevent/hz_zachem/pkg/postgres"
-	"github.com/qazevent/hz_zachem/pkg/rabbitmq"
-	"github.com/qazevent/hz_zachem/pkg/server"
+	"github.com/mrbelka12000/hz_zachem/internal/config"
+	v1 "github.com/mrbelka12000/hz_zachem/internal/delivery/http/v1"
+	"github.com/mrbelka12000/hz_zachem/internal/producer"
+	"github.com/mrbelka12000/hz_zachem/internal/repo"
+	"github.com/mrbelka12000/hz_zachem/internal/service"
+	"github.com/mrbelka12000/hz_zachem/migrations"
+	"github.com/mrbelka12000/hz_zachem/pkg/postgres"
+	"github.com/mrbelka12000/hz_zachem/pkg/rabbitmq"
+	"github.com/mrbelka12000/hz_zachem/pkg/server"
 )
 
 func Run() {

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/qazevent/hz_zachem/internal/config"
-	"github.com/qazevent/hz_zachem/internal/repo"
+	"github.com/mrbelka12000/hz_zachem/internal/config"
+	"github.com/mrbelka12000/hz_zachem/internal/repo"
 )
 
 type Service struct {

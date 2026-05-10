@@ -1,14 +1,18 @@
 package v1
 
 import (
+	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
-	"github.com/qazevent/hz_zachem/internal/config"
-	"github.com/qazevent/hz_zachem/internal/delivery/http/middleware"
-	"github.com/qazevent/hz_zachem/internal/service"
+	"github.com/mrbelka12000/hz_zachem/internal/config"
+	"github.com/mrbelka12000/hz_zachem/internal/delivery/http/middleware"
+	"github.com/mrbelka12000/hz_zachem/internal/service"
+	"github.com/mrbelka12000/hz_zachem/web"
 )
 
 type Router struct {
@@ -87,5 +91,54 @@ func (r *Router) Init() *gin.Engine {
 		}
 	}
 
+	mountSPA(engine)
+
 	return engine
+}
+
+// mountSPA serves the embedded Vite bundle:
+//   - /assets/*  -> hashed JS/CSS chunks from web/dist/assets
+//   - everything else (non-API, GET) -> dist/index.html for client routing
+func mountSPA(engine *gin.Engine) {
+	assets, err := web.Assets()
+	if err != nil {
+		log.Printf("web: assets unavailable: %v", err)
+	} else {
+		engine.StaticFS("/assets", http.FS(assets))
+	}
+
+	index, err := web.IndexHTML()
+	if err != nil {
+		log.Printf("web: %v (SPA fallback disabled)", err)
+		return
+	}
+
+	dist, _ := web.Dist()
+	engine.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// API and probes never fall through to the SPA.
+		if strings.HasPrefix(path, "/v1/") || path == "/healthz" || path == "/readyz" {
+			c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"code": "not_found", "message": "route not found"}})
+			return
+		}
+
+		if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
+			c.Status(http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Try to serve a top-level static file first (favicon, icons, etc.).
+		if dist != nil && path != "/" {
+			rel := strings.TrimPrefix(path, "/")
+			if f, err := dist.Open(rel); err == nil {
+				_ = f.Close()
+				http.ServeFileFS(c.Writer, c.Request, dist, rel)
+				return
+			}
+		}
+
+		// Otherwise hand back index.html so React Router can take over.
+		c.Data(http.StatusOK, "text/html; charset=utf-8", index)
+	})
 }

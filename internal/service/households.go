@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/qazevent/hz_zachem/internal/models"
-	"github.com/qazevent/hz_zachem/internal/repo"
+	"github.com/mrbelka12000/hz_zachem/internal/models"
+	"github.com/mrbelka12000/hz_zachem/internal/repo"
 )
 
 type HouseholdService struct {

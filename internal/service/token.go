@@ -11,7 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/qazevent/hz_zachem/internal/models"
+	"github.com/mrbelka12000/hz_zachem/internal/models"
 )
 
 type AccessClaims struct {

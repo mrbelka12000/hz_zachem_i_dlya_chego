@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/qazevent/hz_zachem/internal/config"
+	"github.com/mrbelka12000/hz_zachem/internal/config"
 )
 
 const (

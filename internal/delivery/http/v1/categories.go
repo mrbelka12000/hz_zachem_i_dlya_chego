@@ -4,9 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/qazevent/hz_zachem/internal/delivery/http/middleware"
-	"github.com/qazevent/hz_zachem/internal/models"
-	"github.com/qazevent/hz_zachem/internal/service"
+	"github.com/mrbelka12000/hz_zachem/internal/delivery/http/middleware"
+	"github.com/mrbelka12000/hz_zachem/internal/models"
+	"github.com/mrbelka12000/hz_zachem/internal/service"
 )
 
 type categoryRequest struct {
