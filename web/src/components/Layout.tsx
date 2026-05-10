@@ -13,6 +13,7 @@ const navItems = [
   { to: '/transactions', label: 'Transactions' },
   { to: '/accounts', label: 'Accounts' },
   { to: '/categories', label: 'Categories' },
+  { to: '/imports', label: 'Import' },
 ] as const
 
 export function Layout({ children }: LayoutProps) {

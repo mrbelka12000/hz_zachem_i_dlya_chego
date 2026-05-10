@@ -16,6 +16,7 @@ type Service struct {
 	Categories   *CategoryService
 	Transactions *TransactionService
 	Analytics    *AnalyticsService
+	Imports      *ImportService
 }
 
 func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
@@ -27,6 +28,7 @@ func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
 	categories := &CategoryService{repo: repository}
 	transactions := &TransactionService{repo: repository, households: households, accounts: accounts}
 	analytics := &AnalyticsService{repo: repository, households: households}
+	imports := &ImportService{repo: repository, accounts: accounts}
 
 	return &Service{
 		repo:         repository,
@@ -38,6 +40,7 @@ func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
 		Categories:   categories,
 		Transactions: transactions,
 		Analytics:    analytics,
+		Imports:      imports,
 	}
 }
 

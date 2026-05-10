@@ -17,6 +17,7 @@ import { EditAccount } from './pages/Accounts/Edit'
 import { CategoriesList } from './pages/Categories/List'
 import { NewCategory } from './pages/Categories/New'
 import { EditCategory } from './pages/Categories/Edit'
+import { CsvImport } from './pages/Imports/CsvImport'
 
 function Protected({ children }: { children: ReactNode }) {
   return (
@@ -118,6 +119,14 @@ export default function App() {
             element={
               <Protected>
                 <EditCategory />
+              </Protected>
+            }
+          />
+          <Route
+            path="/imports"
+            element={
+              <Protected>
+                <CsvImport />
               </Protected>
             }
           />

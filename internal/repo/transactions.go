@@ -54,6 +54,17 @@ func (r *TransactionRepo) FindByIdempotency(ctx context.Context, householdID mod
 	return &t, nil
 }
 
+func (r *TransactionRepo) FindByExternalHash(ctx context.Context, householdID, accountID models.ID, hash string) (*models.Transaction, error) {
+	var t models.Transaction
+	err := r.db.WithContext(ctx).
+		Where("household_id = ? AND account_id = ? AND external_hash = ?", householdID, accountID, hash).
+		First(&t).Error
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	return &t, nil
+}
+
 func (r *TransactionRepo) GetByID(ctx context.Context, householdID, id models.ID) (*models.Transaction, error) {
 	var t models.Transaction
 	err := r.db.WithContext(ctx).

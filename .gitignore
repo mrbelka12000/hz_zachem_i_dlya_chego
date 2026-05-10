@@ -40,3 +40,6 @@ web/node_modules/
 web/dist/
 web/.vite/
 web/coverage/
+
+# Local test data — bank exports / uploads with personal info, never commit
+*.csv
