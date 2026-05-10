@@ -73,14 +73,10 @@ export function TransactionDetail() {
           <p
             className={
               'text-2xl font-semibold tabular-nums ' +
-              (t.type === 'expense'
-                ? 'text-red-600'
-                : t.type === 'income'
-                  ? 'text-green-700'
-                  : 'text-slate-700')
+              (t.type === 'expense' ? 'text-red-600' : 'text-green-700')
             }
           >
-            {t.type === 'expense' ? '−' : t.type === 'income' ? '+' : ''}
+            {t.type === 'expense' ? '−' : '+'}
             {formatMoney(t.amount, t.currency)}
           </p>
         </div>
@@ -161,7 +157,13 @@ function CounterpartCard({
       </header>
       <div className="flex items-baseline justify-between">
         <p className="text-xs uppercase tracking-wide text-slate-500">{t.type}</p>
-        <p className="text-lg font-semibold tabular-nums text-slate-800">
+        <p
+          className={
+            'text-lg font-semibold tabular-nums ' +
+            (t.type === 'expense' ? 'text-red-600' : 'text-green-700')
+          }
+        >
+          {t.type === 'expense' ? '−' : '+'}
           {formatMoney(t.amount, t.currency)}
         </p>
       </div>

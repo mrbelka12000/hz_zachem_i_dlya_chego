@@ -280,14 +280,10 @@ export function TransactionsList() {
                   <td
                     className={
                       'px-4 py-2 text-right font-medium tabular-nums ' +
-                      (t.type === 'expense'
-                        ? 'text-red-600'
-                        : t.type === 'income'
-                          ? 'text-green-700'
-                          : 'text-slate-700')
+                      (t.type === 'expense' ? 'text-red-600' : 'text-green-700')
                     }
                   >
-                    {t.type === 'expense' ? '−' : t.type === 'income' ? '+' : ''}
+                    {t.type === 'expense' ? '−' : '+'}
                     {formatMoney(t.amount, t.currency)}
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">

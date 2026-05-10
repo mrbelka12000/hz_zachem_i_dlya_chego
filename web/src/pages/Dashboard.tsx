@@ -237,14 +237,10 @@ function RecentList({ rows }: { rows: Transaction[] }) {
           <span
             className={
               'font-medium tabular-nums ' +
-              (t.type === 'expense'
-                ? 'text-red-600'
-                : t.type === 'income'
-                  ? 'text-green-700'
-                  : 'text-slate-600')
+              (t.type === 'expense' ? 'text-red-600' : 'text-green-700')
             }
           >
-            {t.type === 'expense' ? '−' : t.type === 'income' ? '+' : ''}
+            {t.type === 'expense' ? '−' : '+'}
             {formatMoney(t.amount, t.currency)}
           </span>
         </li>
