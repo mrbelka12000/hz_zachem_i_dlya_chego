@@ -50,9 +50,9 @@ export function useRates(): RatesData {
 }
 
 /**
- * Convert a decimal-string amount in `currency` into KZT using `rates`.
- * Returns null when no conversion is needed (KZT input) or when the
- * relevant rate has not finished loading.
+ * For UI hints beside a non-KZT amount: returns the KZT equivalent
+ * as a decimal string, or null when the source is already KZT (no
+ * hint needed) or the rate hasn't loaded yet.
  */
 export function convertToKZT(
   amount: string | undefined | null,
@@ -62,6 +62,29 @@ export function convertToKZT(
   if (!amount) return null
   const upper = currency.toUpperCase()
   if (upper === 'KZT') return null
+
+  let rate: number | undefined
+  if (upper === 'USD') rate = rates.usdToKzt
+  else if (upper === 'EUR') rate = rates.eurToKzt
+  if (!rate) return null
+
+  return new Decimal(amount).times(rate).toFixed(2)
+}
+
+/**
+ * Like convertToKZT, but returns the source amount unchanged when it
+ * is already KZT (so aggregations can sum freely without a special
+ * case). Returns null only when conversion was needed but the rate
+ * is missing — caller should treat that as "skip this row".
+ */
+export function toKZT(
+  amount: string | undefined | null,
+  currency: string,
+  rates: RatesData,
+): string | null {
+  if (!amount) return '0'
+  const upper = currency.toUpperCase()
+  if (upper === 'KZT') return amount
 
   let rate: number | undefined
   if (upper === 'USD') rate = rates.usdToKzt

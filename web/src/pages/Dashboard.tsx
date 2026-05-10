@@ -12,8 +12,10 @@ import type {
   Transaction,
 } from '../api/types'
 import { ConvertedHint } from '../components/ConvertedHint'
+import { mergeRowsToKZT, sumToKZT } from '../lib/aggregations'
 import { currentMonthRange, formatDate, formatMonth } from '../lib/dates'
-import { formatMoney, sumMoney } from '../lib/money'
+import { formatMoney } from '../lib/money'
+import { toKZT, useRates } from '../lib/rates'
 import { amountClassName, amountPrefix } from '../lib/transactions'
 
 export function Dashboard() {
@@ -44,9 +46,53 @@ export function Dashboard() {
     queryFn: () => transactionsApi.list({ limit: 10 }),
   })
 
-  const monthExpenseTotal = sumMoney((byCategory.data ?? []).map((r) => r.total))
-  const monthIncomeTotal = sumMoney((incomeByCategory.data ?? []).map((r) => r.total))
+  const rates = useRates()
+
+  // All aggregations are converted to KZT before being summed/grouped.
+  // Backend returns one row per (group, currency); the SPA folds them
+  // into a single KZT bucket per group using the live FX rate.
+  const monthExpenseTotal = sumToKZT(
+    byCategory.data ?? [],
+    (r) => r.total,
+    (r) => r.currency,
+    rates,
+  )
+  const monthIncomeTotal = sumToKZT(
+    incomeByCategory.data ?? [],
+    (r) => r.total,
+    (r) => r.currency,
+    rates,
+  )
   const monthNet = monthIncomeTotal.minus(monthExpenseTotal)
+
+  const expenseByCategory = mergeRowsToKZT(
+    byCategory.data ?? [],
+    (r) => r.category_id ?? r.category_name,
+    (r) => r.category_name,
+    (r) => r.total,
+    (r) => r.currency,
+    rates,
+  )
+  const incomeByCategoryRows = mergeRowsToKZT(
+    incomeByCategory.data ?? [],
+    (r) => r.category_id ?? r.category_name,
+    (r) => r.category_name,
+    (r) => r.total,
+    (r) => r.currency,
+    rates,
+  )
+  const merchantsRows = mergeRowsToKZT(
+    topMerchants.data ?? [],
+    (r) => r.merchant,
+    (r) => r.merchant,
+    (r) => r.total,
+    (r) => r.currency,
+    rates,
+  ).slice(0, 5)
+  const cashflowRows = useMemo(
+    () => foldCashflow(cashflow.data ?? [], rates),
+    [cashflow.data, rates],
+  )
 
   return (
     <div className="space-y-6">
@@ -89,9 +135,9 @@ export function Dashboard() {
           )}
           {byCategory.data && byCategory.data.length > 0 && (
             <BarList
-              rows={byCategory.data.map((r) => ({
-                key: r.category_id ?? r.category_name,
-                label: r.category_name,
+              rows={expenseByCategory.map((r) => ({
+                key: String(r.key),
+                label: r.label,
                 value: r.total,
               }))}
             />
@@ -104,9 +150,9 @@ export function Dashboard() {
           )}
           {incomeByCategory.data && incomeByCategory.data.length > 0 && (
             <BarList
-              rows={incomeByCategory.data.map((r) => ({
-                key: r.category_id ?? r.category_name,
-                label: r.category_name,
+              rows={incomeByCategoryRows.map((r) => ({
+                key: String(r.key),
+                label: r.label,
                 value: r.total,
               }))}
               barClass="bg-green-600"
@@ -121,7 +167,7 @@ export function Dashboard() {
             <Empty>No history yet — import a CSV or add a few transactions.</Empty>
           )}
           {cashflow.data && cashflow.data.length > 0 && (
-            <CashflowBars rows={cashflow.data} />
+            <CashflowBars rows={cashflowRows} />
           )}
         </Card>
       </section>
@@ -140,12 +186,12 @@ export function Dashboard() {
           )}
           {topMerchants.data && topMerchants.data.length > 0 && (
             <ul className="divide-y divide-slate-100">
-              {topMerchants.data.map((m) => (
+              {merchantsRows.map((m) => (
                 <li
-                  key={m.merchant}
+                  key={String(m.key)}
                   className="py-2 flex items-center justify-between text-sm"
                 >
-                  <span className="capitalize text-slate-700">{m.merchant}</span>
+                  <span className="capitalize text-slate-700">{m.label}</span>
                   <span className="font-medium tabular-nums">{formatMoney(m.total)}</span>
                 </li>
               ))}
@@ -265,7 +311,48 @@ function BarList({
   )
 }
 
-function CashflowBars({ rows }: { rows: CashflowMonthRow[] }) {
+interface FoldedCashflowRow {
+  month: string
+  expense: string // KZT
+  income: string // KZT
+  net: string // KZT
+}
+
+/**
+ * Converts each (month, currency) row to KZT and merges by month so a
+ * single bar pair represents the full household cash flow regardless
+ * of how many currencies the user juggles.
+ */
+function foldCashflow(rows: CashflowMonthRow[], rates: ReturnType<typeof useRates>): FoldedCashflowRow[] {
+  const buckets = new Map<string, { expense: Decimal; income: Decimal }>()
+  for (const r of rows) {
+    const ex = toKZTOrZero(r.expense, r.currency, rates)
+    const inc = toKZTOrZero(r.income, r.currency, rates)
+    const key = r.month
+    const existing = buckets.get(key)
+    if (existing) {
+      existing.expense = existing.expense.plus(ex)
+      existing.income = existing.income.plus(inc)
+    } else {
+      buckets.set(key, { expense: new Decimal(ex), income: new Decimal(inc) })
+    }
+  }
+  return Array.from(buckets.entries())
+    .map(([month, { expense, income }]) => ({
+      month,
+      expense: expense.toString(),
+      income: income.toString(),
+      net: income.minus(expense).toString(),
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month))
+}
+
+function toKZTOrZero(amount: string, currency: string, rates: ReturnType<typeof useRates>): string {
+  const v = toKZT(amount, currency, rates)
+  return v ?? '0'
+}
+
+function CashflowBars({ rows }: { rows: FoldedCashflowRow[] }) {
   const max = rows.reduce((m, r) => {
     const ex = Number(r.expense)
     const inc = Number(r.income)

@@ -106,24 +106,28 @@ export interface AuthResponse {
 export interface CategorySpendRow {
   category_id: ID | null
   category_name: string
+  currency: string
   total: Money
   count: number
 }
 
 export interface MonthSpendRow {
   month: string
+  currency: string
   total: Money
   count: number
 }
 
 export interface MerchantSpendRow {
   merchant: string
+  currency: string
   total: Money
   count: number
 }
 
 export interface CashflowMonthRow {
   month: string
+  currency: string
   expense: Money
   income: Money
   net: Money
