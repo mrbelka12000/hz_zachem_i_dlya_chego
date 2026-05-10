@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -298,28 +300,72 @@ func (s *TransactionService) PairTransfers(ctx context.Context, householdID mode
 		}
 	}
 
+	for _, v := range buckets {
+		fmt.Println(v.expenses, v.incomes)
+	}
+
 	paired := 0
 	for _, b := range buckets {
-		if len(b.expenses) != 1 || len(b.incomes) != 1 {
+		// We pair element-wise when:
+		//   * the bucket is balanced (same number of expenses and incomes),
+		//   * all expenses are on a single account,
+		//   * all incomes are on a single (different) account.
+		// Anything else stays unpaired so the user can resolve it manually.
+		if len(b.expenses) == 0 || len(b.expenses) != len(b.incomes) {
 			continue
 		}
-		e := b.expenses[0]
-		i := b.incomes[0]
-		if e.AccountID == i.AccountID {
+		expAcc := b.expenses[0].AccountID
+		incAcc := b.incomes[0].AccountID
+		if expAcc == incAcc {
 			continue
 		}
-		transferID, err := uuid.NewRandom()
-		if err != nil {
-			return paired, err
-		}
-		if err := s.repo.Transactions.PairAsTransfer(ctx, householdID, e.ID, i.ID, transferID); err != nil {
-			if errors.Is(err, repo.ErrConflict) {
-				// concurrent update; skip and let a future run try again
-				continue
+		ambiguous := false
+		for _, e := range b.expenses {
+			if e.AccountID != expAcc {
+				ambiguous = true
+				break
 			}
-			return paired, err
 		}
-		paired++
+		if !ambiguous {
+			for _, i := range b.incomes {
+				if i.AccountID != incAcc {
+					ambiguous = true
+					break
+				}
+			}
+		}
+		if ambiguous {
+			continue
+		}
+
+		// Stable order: occurred_at then id, so the same input yields the
+		// same pairings deterministically across runs.
+		sort.Slice(b.expenses, func(i, j int) bool {
+			if !b.expenses[i].OccurredAt.Equal(b.expenses[j].OccurredAt) {
+				return b.expenses[i].OccurredAt.Before(b.expenses[j].OccurredAt)
+			}
+			return b.expenses[i].ID.String() < b.expenses[j].ID.String()
+		})
+		sort.Slice(b.incomes, func(i, j int) bool {
+			if !b.incomes[i].OccurredAt.Equal(b.incomes[j].OccurredAt) {
+				return b.incomes[i].OccurredAt.Before(b.incomes[j].OccurredAt)
+			}
+			return b.incomes[i].ID.String() < b.incomes[j].ID.String()
+		})
+
+		for k := range b.expenses {
+			transferID, err := uuid.NewRandom()
+			if err != nil {
+				return paired, err
+			}
+			if err := s.repo.Transactions.PairAsTransfer(ctx, householdID, b.expenses[k].ID, b.incomes[k].ID, transferID); err != nil {
+				if errors.Is(err, repo.ErrConflict) {
+					continue
+				}
+				return paired, err
+			}
+			paired++
+		}
 	}
 	return paired, nil
 }

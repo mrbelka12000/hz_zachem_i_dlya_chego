@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -78,6 +79,11 @@ func Parse(r io.Reader) ([]ParsedRow, []RowError, error) {
 
 	var rows []ParsedRow
 	var errs []RowError
+	// Tracks how many times we've seen the same (date, amount, type, merchant,
+	// description) tuple within this file. Lets the dedup hash distinguish
+	// legitimate duplicates from each other (e.g. four 500k transfers in a
+	// day) while still collapsing a re-upload of the same file.
+	occurrence := map[string]int{}
 	line := 1 // header was line 1
 	for {
 		line++
@@ -97,6 +103,9 @@ func Parse(r io.Reader) ([]ParsedRow, []RowError, error) {
 			errs = append(errs, RowError{Line: line, Message: rowErr})
 			continue
 		}
+		canon := canonicalKey(row.OccurredAt, row.Amount.String(), row.Type, row.Merchant, row.Description)
+		occurrence[canon]++
+		row.ExternalHash = hashCanonical(canon, occurrence[canon])
 		rows = append(rows, row)
 	}
 	return rows, errs, nil
@@ -149,13 +158,14 @@ func parseRow(rec []string) (ParsedRow, string) {
 	})
 
 	return ParsedRow{
-		OccurredAt:   occurred,
-		Type:         txType,
-		Amount:       abs,
-		Merchant:     name,
-		Description:  typeStr,
-		ExternalHash: hashRow(occurred, abs.String(), txType, name, typeStr),
-		RawPayload:   raw,
+		OccurredAt:  occurred,
+		Type:        txType,
+		Amount:      abs,
+		Merchant:    name,
+		Description: typeStr,
+		// ExternalHash is set by Parse so it can include a per-occurrence
+		// suffix that distinguishes legitimate same-content duplicates.
+		RawPayload: raw,
 	}, ""
 }
 
@@ -176,18 +186,29 @@ func isBlank(rec []string) bool {
 	return true
 }
 
-// hashRow produces a content fingerprint suitable for the
-// transactions.external_hash column. Two rows with identical
-// canonical content collide and so dedupe via the unique index on
-// (account_id, external_hash).
-func hashRow(occurred time.Time, amount string, txType models.TransactionType, merchant, description string) string {
-	canon := strings.Join([]string{
+// canonicalKey is the content fingerprint of a row, ignoring ordering.
+// Two rows with identical canonical keys are by-content duplicates.
+func canonicalKey(occurred time.Time, amount string, txType models.TransactionType, merchant, description string) string {
+	return strings.Join([]string{
 		occurred.UTC().Format(time.RFC3339),
 		amount,
 		string(txType),
 		strings.ToLower(strings.TrimSpace(merchant)),
 		strings.ToLower(strings.TrimSpace(description)),
 	}, "|")
+}
+
+// hashCanonical produces the value stored in transactions.external_hash.
+//
+// The 1st occurrence of a canonical key in a file gets the original
+// content-only hash (backwards compatible with rows imported before
+// this fix). Subsequent occurrences (2nd, 3rd, …) include the
+// occurrence index in the digest so legitimate duplicates dedupe
+// correctly across re-imports without colliding within one file.
+func hashCanonical(canon string, occurrence int) string {
+	if occurrence > 1 {
+		canon = canon + "|#" + strconv.Itoa(occurrence)
+	}
 	sum := sha256.Sum256([]byte(canon))
 	return hex.EncodeToString(sum[:])
 }
