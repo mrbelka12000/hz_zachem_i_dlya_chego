@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { accountsApi } from '../../api/accounts'
 import { categoriesApi } from '../../api/categories'
@@ -12,11 +12,21 @@ import { amountClassName, amountPrefix } from '../../lib/transactions'
 export function TransactionDetail() {
   const { id = '' } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const qc = useQueryClient()
 
   const txQuery = useQuery<Transaction>({
     queryKey: ['transactions', 'one', id],
     queryFn: () => transactionsApi.get(id),
     enabled: Boolean(id),
+  })
+
+  const unpair = useMutation({
+    mutationFn: () => transactionsApi.unpair(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['analytics'] })
+      navigate('/transactions', { replace: true })
+    },
   })
 
   const accountsQuery = useQuery<Account[]>({
@@ -59,6 +69,25 @@ export function TransactionDetail() {
           >
             Back
           </button>
+          {t.transfer_id && (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  confirm(
+                    'Unpair this transfer? Both legs will revert to expense / income and category info will not be restored.',
+                  )
+                ) {
+                  unpair.mutate()
+                }
+              }}
+              disabled={unpair.isPending}
+              className="rounded-md border border-slate-300 text-sm px-3 py-1.5 hover:bg-white disabled:opacity-60"
+              title="Revert this paired transfer back to expense + income"
+            >
+              {unpair.isPending ? 'Unpairing…' : 'Unpair transfer'}
+            </button>
+          )}
           <Link
             to={`/transactions/${t.id}/edit`}
             className="rounded-md bg-slate-900 text-white text-sm px-3 py-1.5 hover:bg-slate-800"

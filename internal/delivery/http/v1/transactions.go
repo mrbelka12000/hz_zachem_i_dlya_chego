@@ -256,6 +256,21 @@ func (r *Router) pairTransfers(c *gin.Context) {
 	ok(c, gin.H{"paired": paired})
 }
 
+func (r *Router) unpairTransfer(c *gin.Context) {
+	hid := middleware.MustHouseholdID(c)
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		middleware.Respond(c, service.ErrInvalidInput)
+		return
+	}
+	unpaired, err := r.svc.Transactions.Unpair(c.Request.Context(), hid, id)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	ok(c, gin.H{"unpaired": unpaired})
+}
+
 func (r *Router) deleteTransaction(c *gin.Context) {
 	hid := middleware.MustHouseholdID(c)
 	uid := middleware.MustUserID(c)

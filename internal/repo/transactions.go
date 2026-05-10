@@ -79,6 +79,44 @@ func (r *TransactionRepo) FindTransferCounterpart(ctx context.Context, household
 	return &t, nil
 }
 
+// UnpairLeg names a single leg to revert from a paired transfer state.
+type UnpairLeg struct {
+	ID   models.ID
+	Type models.TransactionType
+}
+
+// UnpairTransfer reverts the rows in `legs` from paired-transfer state
+// back to plain expense/income/etc. — atomically in one DB tx. Each
+// row keeps its account, amount, occurred_at, etc.; only type,
+// transfer_id, transfer_direction, and updated_at change.
+//
+// Each row must currently be paired (transfer_id IS NOT NULL).
+// Otherwise the call returns ErrConflict and rolls everything back.
+func (r *TransactionRepo) UnpairTransfer(ctx context.Context, householdID models.ID, legs []UnpairLeg) error {
+	if len(legs) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, leg := range legs {
+			res := tx.Model(&models.Transaction{}).
+				Where("household_id = ? AND id = ? AND transfer_id IS NOT NULL", householdID, leg.ID).
+				Updates(map[string]any{
+					"type":               leg.Type,
+					"transfer_id":        nil,
+					"transfer_direction": nil,
+					"updated_at":         gorm.Expr("NOW()"),
+				})
+			if res.Error != nil {
+				return mapErr(res.Error)
+			}
+			if res.RowsAffected != 1 {
+				return ErrConflict
+			}
+		}
+		return nil
+	})
+}
+
 // ListUnpairedExpenseAndIncome returns rows that are candidates for
 // transfer pairing: still alive, not yet part of a transfer, and of
 // type expense or income. Service layer does the actual matching

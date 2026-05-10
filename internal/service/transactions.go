@@ -257,6 +257,55 @@ func (s *TransactionService) Update(ctx context.Context, in UpdateTransactionInp
 	return s.Get(ctx, in.HouseholdID, in.ID)
 }
 
+// Unpair reverts a transfer leg (and its counterpart, when present)
+// back to plain expense / income rows. Each leg's restored type comes
+// from its transfer_direction:
+//
+//	'out'  -> expense
+//	'in'   -> income
+//	(null) -> expense (legacy paired rows lacked direction; user can edit)
+//
+// Returns the number of rows that were unpaired (1 for orphan, 2 for
+// a normal pair).
+func (s *TransactionService) Unpair(ctx context.Context, householdID, id models.ID) (int, error) {
+	t, err := s.Get(ctx, householdID, id)
+	if err != nil {
+		return 0, err
+	}
+	if t.TransferID == nil {
+		return 0, ErrInvalidInput
+	}
+
+	legs := []repo.UnpairLeg{{ID: t.ID, Type: restoreTypeFromDirection(t.TransferDirection)}}
+
+	cp, err := s.repo.Transactions.FindTransferCounterpart(ctx, householdID, *t.TransferID, t.ID)
+	if err != nil && !errors.Is(err, repo.ErrNotFound) {
+		return 0, err
+	}
+	if err == nil {
+		legs = append(legs, repo.UnpairLeg{
+			ID:   cp.ID,
+			Type: restoreTypeFromDirection(cp.TransferDirection),
+		})
+	}
+
+	if err := s.repo.Transactions.UnpairTransfer(ctx, householdID, legs); err != nil {
+		if errors.Is(err, repo.ErrConflict) {
+			// Someone unpaired between the read and the write; treat as no-op.
+			return 0, nil
+		}
+		return 0, err
+	}
+	return len(legs), nil
+}
+
+func restoreTypeFromDirection(d *models.TransferDirection) models.TransactionType {
+	if d != nil && *d == models.TransferDirectionIn {
+		return models.TransactionTypeIncome
+	}
+	return models.TransactionTypeExpense
+}
+
 func (s *TransactionService) SoftDelete(ctx context.Context, householdID, id, deletedBy models.ID) error {
 	if err := s.repo.Transactions.SoftDelete(ctx, householdID, id, deletedBy); err != nil {
 		if errors.Is(err, repo.ErrNotFound) {

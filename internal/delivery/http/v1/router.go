@@ -86,6 +86,7 @@ func (r *Router) Init() *gin.Engine {
 			scoped.POST("/transactions/pair-transfers", r.pairTransfers)
 			scoped.GET("/transactions/:id", r.getTransaction)
 			scoped.PUT("/transactions/:id", r.updateTransaction)
+			scoped.POST("/transactions/:id/unpair", r.unpairTransfer)
 			scoped.DELETE("/transactions/:id", r.deleteTransaction)
 
 			scoped.GET("/analytics/spending-by-category", r.spendingByCategory)

@@ -98,4 +98,7 @@ export const transactionsApi = {
 
   pairTransfers: () =>
     apiFetch<{ paired: number }>('POST', '/v1/transactions/pair-transfers'),
+
+  unpair: (id: ID) =>
+    apiFetch<{ unpaired: number }>('POST', `/v1/transactions/${id}/unpair`),
 }
