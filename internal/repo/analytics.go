@@ -58,6 +58,18 @@ const excludeNonCashflow = `
 		AND t.deleted_at IS NULL
 	`
 
+// excludeDeletedAccounts drops rows whose parent account has been
+// soft-deleted. GORM only auto-applies the deleted_at filter to
+// queries it routes itself; these raw analytics queries select
+// straight from `transactions` and need an explicit check so a user
+// hitting "Delete account" stops contributing to stats.
+const excludeDeletedAccounts = `
+		AND EXISTS (
+			SELECT 1 FROM accounts a
+			WHERE a.id = t.account_id AND a.deleted_at IS NULL
+		)
+	`
+
 func (r *AnalyticsRepo) SpendingByCategory(ctx context.Context, householdID models.ID, from, to time.Time) ([]CategorySpendRow, error) {
 	var rows []CategorySpendRow
 	err := r.db.WithContext(ctx).Raw(`
@@ -72,7 +84,7 @@ func (r *AnalyticsRepo) SpendingByCategory(ctx context.Context, householdID mode
 		WHERE t.household_id = ?
 		  AND t.occurred_at >= ?
 		  AND t.occurred_at < ?
-		  `+excludeNonSpending+`
+		  `+excludeNonSpending+excludeDeletedAccounts+`
 		GROUP BY t.category_id, c.name, t.currency
 		ORDER BY total DESC
 	`, householdID, from, to).Scan(&rows).Error
@@ -94,7 +106,7 @@ func (r *AnalyticsRepo) SpendingByMonth(ctx context.Context, householdID models.
 		WHERE t.household_id = ?
 		  AND t.occurred_at >= ?
 		  AND t.occurred_at < ?
-		  `+excludeNonSpending+`
+		  `+excludeNonSpending+excludeDeletedAccounts+`
 		GROUP BY month, t.currency
 		ORDER BY month ASC
 	`, timezone, householdID, from, to).Scan(&rows).Error
@@ -120,7 +132,7 @@ func (r *AnalyticsRepo) TopMerchants(ctx context.Context, householdID models.ID,
 		  AND t.occurred_at >= ?
 		  AND t.occurred_at < ?
 		  AND t.merchant <> ''
-		  `+excludeNonSpending+`
+		  `+excludeNonSpending+excludeDeletedAccounts+`
 		GROUP BY lower(t.merchant), t.currency
 		ORDER BY total DESC
 		LIMIT ?
@@ -132,7 +144,8 @@ func (r *AnalyticsRepo) TopMerchants(ctx context.Context, householdID models.ID,
 }
 
 // IncomeByCategory mirrors SpendingByCategory but for type='income'.
-// Transfers and deleted rows are excluded.
+// Transfers, soft-deleted transactions, and rows on soft-deleted
+// accounts are all excluded.
 func (r *AnalyticsRepo) IncomeByCategory(ctx context.Context, householdID models.ID, from, to time.Time) ([]CategorySpendRow, error) {
 	var rows []CategorySpendRow
 	err := r.db.WithContext(ctx).Raw(`
@@ -150,6 +163,7 @@ func (r *AnalyticsRepo) IncomeByCategory(ctx context.Context, householdID models
 		  AND t.type = 'income'
 		  AND t.transfer_id IS NULL
 		  AND t.deleted_at IS NULL
+		  `+excludeDeletedAccounts+`
 		GROUP BY t.category_id, c.name, t.currency
 		ORDER BY total DESC
 	`, householdID, from, to).Scan(&rows).Error
@@ -175,7 +189,7 @@ func (r *AnalyticsRepo) CashflowByMonth(ctx context.Context, householdID models.
 		WHERE t.household_id = ?
 		  AND t.occurred_at >= ?
 		  AND t.occurred_at < ?
-		  `+excludeNonCashflow+`
+		  `+excludeNonCashflow+excludeDeletedAccounts+`
 		GROUP BY month, t.currency
 		ORDER BY month ASC
 	`, timezone, householdID, from, to).Scan(&rows).Error
@@ -214,6 +228,7 @@ func (r *AnalyticsRepo) AccountCashflowByMonth(ctx context.Context, householdID,
 		  AND t.occurred_at < ?
 		  AND t.deleted_at IS NULL
 		  AND t.type IN ('expense','income','transfer')
+		  `+excludeDeletedAccounts+`
 		GROUP BY month, t.currency
 		ORDER BY month ASC
 	`, timezone, householdID, accountID, from, to).Scan(&rows).Error
