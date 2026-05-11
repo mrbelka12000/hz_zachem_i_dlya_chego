@@ -10,7 +10,7 @@ export type ID = string
 
 export type Money = string
 
-export type AccountType = 'cash' | 'card' | 'bank' | 'other'
+export type AccountType = 'cash' | 'card' | 'bank' | 'other' | 'debt'
 export type AccountStatus = 'active' | 'archived'
 
 export type TransactionType = 'expense' | 'income' | 'transfer' | 'adjustment'

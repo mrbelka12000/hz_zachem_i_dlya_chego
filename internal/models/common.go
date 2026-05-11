@@ -18,11 +18,16 @@ const (
 	AccountTypeCard  AccountType = "card"
 	AccountTypeBank  AccountType = "bank"
 	AccountTypeOther AccountType = "other"
+	// AccountTypeDebt represents money owed in either direction.
+	// Negative balance = the household owes someone; positive = someone
+	// owes the household. Borrowing / repayment is modeled as a transfer
+	// between the debt account and a cash/card account.
+	AccountTypeDebt AccountType = "debt"
 )
 
 func (t AccountType) Valid() bool {
 	switch t {
-	case AccountTypeCash, AccountTypeCard, AccountTypeBank, AccountTypeOther:
+	case AccountTypeCash, AccountTypeCard, AccountTypeBank, AccountTypeOther, AccountTypeDebt:
 		return true
 	}
 	return false

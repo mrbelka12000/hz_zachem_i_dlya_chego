@@ -9,15 +9,17 @@ import type { AccountType } from '../../api/types'
 
 const schema = z.object({
   name: z.string().min(1, 'Required').max(100),
-  type: z.enum(['cash', 'card', 'bank', 'other']),
+  type: z.enum(['cash', 'card', 'bank', 'other', 'debt']),
   currency: z
     .string()
     .length(3, 'ISO 4217 currency code (3 letters)')
     .regex(/^[A-Za-z]{3}$/, 'Letters only'),
+  // Negative values are allowed: debt accounts start negative when the
+  // household owes money; any cash/card account could also be overdrawn.
   initial_balance: z
     .string()
     .min(1, 'Required')
-    .regex(/^[0-9]+(\.[0-9]{1,2})?$/, 'Use up to 2 decimals'),
+    .regex(/^-?[0-9]+(\.[0-9]{1,2})?$/, 'Use up to 2 decimals'),
 })
 
 export type AccountFormValues = z.infer<typeof schema>
@@ -90,6 +92,7 @@ export function AccountForm({ mode, initial, onSubmit, submitLabel }: Props) {
             <option value="cash">Cash</option>
             <option value="card">Card</option>
             <option value="bank">Bank</option>
+            <option value="debt">Debt (can be negative)</option>
             <option value="other">Other</option>
           </select>
         </Field>

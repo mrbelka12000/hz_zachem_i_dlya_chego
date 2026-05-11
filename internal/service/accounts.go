@@ -5,8 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/shopspring/decimal"
-
 	"github.com/mrbelka12000/hz_zachem/internal/models"
 	"github.com/mrbelka12000/hz_zachem/internal/repo"
 )
@@ -38,9 +36,6 @@ func (s *AccountService) Create(ctx context.Context, in CreateAccountInput) (*mo
 	in.Name = strings.TrimSpace(in.Name)
 	in.Currency = strings.ToUpper(strings.TrimSpace(in.Currency))
 	if in.Name == "" || !in.Type.Valid() || len(in.Currency) != 3 {
-		return nil, ErrInvalidInput
-	}
-	if in.InitialBalance.LessThan(decimal.Zero) {
 		return nil, ErrInvalidInput
 	}
 

@@ -54,12 +54,23 @@ export function Dashboard() {
 
   const rates = useRates()
 
-  const totalBalance = sumToKZT(
-    balances.data ?? [],
+  // Split balances into assets and debts so the Dashboard surfaces
+  // both sides of the household's net worth. "Debts" is the absolute
+  // sum of negative balances (whether they sit on a `debt`-typed
+  // account or just an overdrawn cash account).
+  const assetsTotal = sumToKZT(
+    (balances.data ?? []).filter((r) => !new Decimal(r.balance).isNegative()),
     (r) => r.balance,
     (r) => r.currency,
     rates,
   )
+  const debtsTotal = sumToKZT(
+    (balances.data ?? []).filter((r) => new Decimal(r.balance).isNegative()),
+    (r) => new Decimal(r.balance).abs().toString(),
+    (r) => r.currency,
+    rates,
+  )
+  const netWorth = assetsTotal.minus(debtsTotal)
 
   // All aggregations are converted to KZT before being summed/grouped.
   // Backend returns one row per (group, currency); the SPA folds them
@@ -119,23 +130,35 @@ export function Dashboard() {
         </Link>
       </header>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1">
-          <Kpi
-            label="Total balance"
-            value={formatMoney(totalBalance.toString())}
-            accent={balanceAccent(totalBalance)}
-            loading={balances.isPending}
-            subtle={
-              balances.data && balances.data.length > 0
-                ? `${balances.data.length} account${balances.data.length === 1 ? '' : 's'} · KZT-equivalent`
-                : undefined
-            }
-          />
-        </div>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Kpi
+          label="Assets"
+          value={formatMoney(assetsTotal.toString())}
+          accent="text-green-700"
+          loading={balances.isPending}
+        />
+        <Kpi
+          label="Debts"
+          value={formatMoney(debtsTotal.toString())}
+          accent={debtsTotal.isZero() ? 'text-slate-700' : 'text-red-600'}
+          loading={balances.isPending}
+        />
+        <Kpi
+          label="Net worth"
+          value={formatMoney(netWorth.toString())}
+          accent={balanceAccent(netWorth)}
+          loading={balances.isPending}
+          subtle={
+            balances.data && balances.data.length > 0
+              ? `${balances.data.length} account${balances.data.length === 1 ? '' : 's'} · KZT-equivalent`
+              : undefined
+          }
+        />
+      </section>
+
+      <section>
         <Card
           title="Accounts"
-          className="lg:col-span-2"
           actions={
             <Link to="/accounts" className="text-xs text-slate-500 hover:underline">
               Manage
