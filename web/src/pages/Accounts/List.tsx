@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import Decimal from 'decimal.js'
 
-import { accountsApi } from '../../api/accounts'
-import type { Account, ID } from '../../api/types'
+import { accountsApi, type AccountBalanceRow } from '../../api/accounts'
+import type { Account, ID, Money } from '../../api/types'
 import { ConvertedHint } from '../../components/ConvertedHint'
 import { formatMoney } from '../../lib/money'
 
@@ -14,6 +16,17 @@ export function AccountsList() {
     queryKey: ['accounts'],
     queryFn: () => accountsApi.list(true),
   })
+
+  const balances = useQuery<AccountBalanceRow[]>({
+    queryKey: ['accounts', 'balances', { archived: true }],
+    queryFn: () => accountsApi.balances(true),
+  })
+
+  const balanceById = useMemo(() => {
+    const m = new Map<ID, Money>()
+    for (const r of balances.data ?? []) m.set(r.account_id, r.balance)
+    return m
+  }, [balances.data])
 
   const archive = useMutation({
     mutationFn: (id: ID) => accountsApi.archive(id),
@@ -63,6 +76,7 @@ export function AccountsList() {
               <th className="px-4 py-2 font-medium">Type</th>
               <th className="px-4 py-2 font-medium">Currency</th>
               <th className="px-4 py-2 font-medium text-right">Initial balance</th>
+              <th className="px-4 py-2 font-medium text-right">Current balance</th>
               <th className="px-4 py-2 font-medium">Status</th>
               <th className="px-4 py-2" />
             </tr>
@@ -70,14 +84,14 @@ export function AccountsList() {
           <tbody className="divide-y divide-slate-100">
             {accounts.isPending && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   Loading…
                 </td>
               </tr>
             )}
             {!accounts.isPending && rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
                   No accounts yet — create one to start tracking.
                 </td>
               </tr>
@@ -99,6 +113,26 @@ export function AccountsList() {
                   <td className="px-4 py-2 text-right tabular-nums">
                     {formatMoney(a.initial_balance, a.currency)}
                     <ConvertedHint amount={a.initial_balance} currency={a.currency} />
+                  </td>
+                  <td
+                    className={
+                      'px-4 py-2 text-right tabular-nums font-medium ' +
+                      currentBalanceAccent(balanceById.get(a.id))
+                    }
+                  >
+                    {balances.isPending && !balanceById.has(a.id) ? (
+                      <span className="text-slate-400">…</span>
+                    ) : balanceById.has(a.id) ? (
+                      <>
+                        {formatMoney(balanceById.get(a.id)!, a.currency)}
+                        <ConvertedHint
+                          amount={balanceById.get(a.id)!}
+                          currency={a.currency}
+                        />
+                      </>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-2">
                     <span
@@ -162,4 +196,12 @@ export function AccountsList() {
       </section>
     </div>
   )
+}
+
+function currentBalanceAccent(balance: Money | undefined): string {
+  if (!balance) return 'text-slate-700'
+  const d = new Decimal(balance)
+  if (d.isNegative()) return 'text-red-600'
+  if (d.isZero()) return 'text-slate-500'
+  return 'text-slate-800'
 }
