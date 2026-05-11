@@ -18,6 +18,7 @@ type TransactionService struct {
 	repo       *repo.Repository
 	households *HouseholdService
 	accounts   *AccountService
+	rules      *RuleService
 }
 
 type CreateTransactionInput struct {
@@ -97,24 +98,25 @@ func (s *TransactionService) Create(ctx context.Context, in CreateTransactionInp
 		}
 	}
 
-	source := models.CategorySourceNone
-	if in.CategoryID != nil {
-		source = models.CategorySourceManual
+	categoryID, source, ruleID, err := s.resolveCategory(ctx, in)
+	if err != nil {
+		return nil, err
 	}
 
 	t := &models.Transaction{
-		HouseholdID:    in.HouseholdID,
-		AccountID:      in.AccountID,
-		Type:           in.Type,
-		Amount:         in.Amount,
-		Currency:       account.Currency,
-		OccurredAt:     in.OccurredAt,
-		Description:    in.Description,
-		Merchant:       in.Merchant,
-		CategoryID:     in.CategoryID,
-		CategorySource: source,
-		Source:         models.TransactionSourceManual,
-		CreatedBy:      in.CreatedBy,
+		HouseholdID:          in.HouseholdID,
+		AccountID:            in.AccountID,
+		Type:                 in.Type,
+		Amount:               in.Amount,
+		Currency:             account.Currency,
+		OccurredAt:           in.OccurredAt,
+		Description:          in.Description,
+		Merchant:             in.Merchant,
+		CategoryID:           categoryID,
+		CategorySource:       source,
+		CategorizationRuleID: ruleID,
+		Source:               models.TransactionSourceManual,
+		CreatedBy:            in.CreatedBy,
 	}
 	if in.IdempotencyKey != "" {
 		key := in.IdempotencyKey
@@ -127,6 +129,30 @@ func (s *TransactionService) Create(ctx context.Context, in CreateTransactionInp
 		return nil, err
 	}
 	return t, nil
+}
+
+// resolveCategory decides which category (if any) attaches to a new
+// transaction. A caller-supplied CategoryID wins. Otherwise the
+// household's categorization rules are consulted and the winning
+// rule's category is applied with source='rule'. No match => no
+// category, source='none'.
+func (s *TransactionService) resolveCategory(ctx context.Context, in CreateTransactionInput) (categoryID *models.ID, source models.CategorySource, ruleID *models.ID, err error) {
+	if in.CategoryID != nil {
+		return in.CategoryID, models.CategorySourceManual, nil, nil
+	}
+	if s.rules == nil {
+		return nil, models.CategorySourceNone, nil, nil
+	}
+	rule, err := s.rules.MatchForTransaction(ctx, in.HouseholdID, in.Merchant, in.Description)
+	if err != nil {
+		return nil, models.CategorySourceNone, nil, err
+	}
+	if rule == nil {
+		return nil, models.CategorySourceNone, nil, nil
+	}
+	catID := rule.CategoryID
+	rID := rule.ID
+	return &catID, models.CategorySourceRule, &rID, nil
 }
 
 func (s *TransactionService) CreateTransfer(ctx context.Context, in CreateTransferInput) (expense, income *models.Transaction, err error) {

@@ -17,6 +17,7 @@ type Service struct {
 	Transactions *TransactionService
 	Analytics    *AnalyticsService
 	Imports      *ImportService
+	Rules        *RuleService
 }
 
 func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
@@ -26,7 +27,8 @@ func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
 	auth := &AuthService{repo: repository, tokens: tokens, refreshTTL: cfg.RefreshTTL, households: households}
 	accounts := &AccountService{repo: repository, households: households}
 	categories := &CategoryService{repo: repository}
-	transactions := &TransactionService{repo: repository, households: households, accounts: accounts}
+	rules := &RuleService{repo: repository}
+	transactions := &TransactionService{repo: repository, households: households, accounts: accounts, rules: rules}
 	analytics := &AnalyticsService{repo: repository, households: households}
 	imports := &ImportService{repo: repository, accounts: accounts, transactions: transactions}
 
@@ -41,6 +43,7 @@ func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
 		Transactions: transactions,
 		Analytics:    analytics,
 		Imports:      imports,
+		Rules:        rules,
 	}
 }
 

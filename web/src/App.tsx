@@ -19,6 +19,7 @@ import { EditAccount } from './pages/Accounts/Edit'
 import { CategoriesList } from './pages/Categories/List'
 import { NewCategory } from './pages/Categories/New'
 import { EditCategory } from './pages/Categories/Edit'
+import { RulesList } from './pages/Rules/List'
 import { CsvImport } from './pages/Imports/CsvImport'
 
 function Protected({ children }: { children: ReactNode }) {
@@ -137,6 +138,14 @@ export default function App() {
             element={
               <Protected>
                 <EditCategory />
+              </Protected>
+            }
+          />
+          <Route
+            path="/rules"
+            element={
+              <Protected>
+                <RulesList />
               </Protected>
             }
           />

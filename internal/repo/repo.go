@@ -15,6 +15,7 @@ type Repository struct {
 	Categories   *CategoryRepo
 	Transactions *TransactionRepo
 	Analytics    *AnalyticsRepo
+	Rules        *RuleRepo
 }
 
 func New(db *gorm.DB) *Repository {
@@ -26,6 +27,7 @@ func New(db *gorm.DB) *Repository {
 		Categories:   &CategoryRepo{db: db},
 		Transactions: &TransactionRepo{db: db},
 		Analytics:    &AnalyticsRepo{db: db},
+		Rules:        &RuleRepo{db: db},
 	}
 }
 

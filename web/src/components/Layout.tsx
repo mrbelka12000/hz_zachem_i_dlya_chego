@@ -14,6 +14,7 @@ const navItems = [
   { to: '/transactions', label: 'Transactions' },
   { to: '/accounts', label: 'Accounts' },
   { to: '/categories', label: 'Categories' },
+  { to: '/rules', label: 'Rules' },
   { to: '/imports', label: 'Import' },
 ] as const
 

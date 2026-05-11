@@ -48,17 +48,30 @@ func (r *Router) Init() *gin.Engine {
 	engine.GET("/readyz", r.readyz)
 
 	api := engine.Group("/v1")
+	r.mountAuthRoutes(api)
+	r.mountAuthenticatedRoutes(api)
+	r.mountScopedRoutes(api)
 
+	mountSPA(engine)
+
+	return engine
+}
+
+func (r *Router) mountAuthRoutes(api *gin.RouterGroup) {
 	auth := api.Group("/auth")
 	auth.POST("/register", r.register)
 	auth.POST("/login", r.login)
 	auth.POST("/refresh", r.refresh)
 	auth.POST("/logout", r.logout)
+}
 
+func (r *Router) mountAuthenticatedRoutes(api *gin.RouterGroup) {
 	protected := api.Group("")
 	protected.Use(middleware.Auth(r.svc))
 	protected.GET("/me", r.me)
+}
 
+func (r *Router) mountScopedRoutes(api *gin.RouterGroup) {
 	scoped := api.Group("")
 	scoped.Use(middleware.Auth(r.svc), middleware.Household(r.svc))
 
@@ -78,6 +91,13 @@ func (r *Router) Init() *gin.Engine {
 	scoped.PUT("/categories/:id", r.updateCategory)
 	scoped.DELETE("/categories/:id", r.deleteCategory)
 
+	scoped.GET("/categorization-rules", r.listRules)
+	scoped.POST("/categorization-rules", r.createRule)
+	scoped.POST("/categorization-rules/apply", r.applyRules)
+	scoped.GET("/categorization-rules/:id", r.getRule)
+	scoped.PUT("/categorization-rules/:id", r.updateRule)
+	scoped.DELETE("/categorization-rules/:id", r.deleteRule)
+
 	scoped.GET("/transactions", r.listTransactions)
 	scoped.POST("/transactions", r.createTransaction)
 	scoped.POST("/transactions/transfer", r.createTransfer)
@@ -94,10 +114,6 @@ func (r *Router) Init() *gin.Engine {
 	scoped.GET("/analytics/cashflow-by-month", r.cashflowByMonth)
 
 	scoped.POST("/imports/csv", r.importCSV)
-
-	mountSPA(engine)
-
-	return engine
 }
 
 // mountSPA serves the embedded Vite bundle:
