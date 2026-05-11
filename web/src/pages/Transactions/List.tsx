@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { accountsApi } from '../../api/accounts'
@@ -32,13 +32,14 @@ const PAGE_SIZE = 25
 export function TransactionsList() {
   const qc = useQueryClient()
   const navigate = useNavigate()
-  const [filters, setFilters] = useState<FilterState>({
+  const [searchParams] = useSearchParams()
+  const [filters, setFilters] = useState<FilterState>(() => ({
     type: '',
-    account_id: '',
-    category_id: '',
+    account_id: (searchParams.get('account_id') ?? '') as ID | '',
+    category_id: (searchParams.get('category_id') ?? '') as ID | '',
     q: '',
-    uncategorized: false,
-  })
+    uncategorized: searchParams.get('uncategorized') === 'true',
+  }))
 
   const accounts = useQuery<Account[]>({
     queryKey: ['accounts'],

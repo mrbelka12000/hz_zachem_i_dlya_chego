@@ -20,6 +20,7 @@ export interface AccountBalance {
 export interface AccountBalanceRow {
   account_id: ID
   name: string
+  type: AccountType
   currency: string
   status: AccountStatus
   balance: Money

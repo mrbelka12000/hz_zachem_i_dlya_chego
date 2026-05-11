@@ -113,6 +113,7 @@ func (r *AccountRepo) Balance(ctx context.Context, householdID, accountID models
 type AccountBalanceRow struct {
 	AccountID models.ID            `json:"account_id"`
 	Name      string               `json:"name"`
+	Type      models.AccountType   `json:"type"`
 	Currency  string               `json:"currency"`
 	Status    models.AccountStatus `json:"status"`
 	Balance   models.Money         `json:"balance"`
@@ -128,6 +129,7 @@ func (r *AccountRepo) Balances(ctx context.Context, householdID models.ID, inclu
 		SELECT
 			a.id AS account_id,
 			a.name,
+			a.type,
 			a.currency,
 			a.status,
 			a.initial_balance + COALESCE((
