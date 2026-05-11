@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 
 import { authApi } from '../api/auth'
 import { useAuth } from '../auth/AuthProvider'
+import { useTheme } from '../theme/ThemeProvider'
 
 interface LayoutProps {
   children: ReactNode
@@ -18,6 +19,7 @@ const navItems = [
 
 export function Layout({ children }: LayoutProps) {
   const { me, invalidate } = useAuth()
+  const { theme, toggle } = useTheme()
   const navigate = useNavigate()
 
   async function onLogout() {
@@ -59,6 +61,16 @@ export function Layout({ children }: LayoutProps) {
           <p className="text-xs text-slate-500 truncate" title={me?.user_id}>
             {me?.user_id?.slice(0, 8)}…
           </p>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            className="w-full flex items-center justify-between text-sm rounded-md border border-slate-300 px-3 py-1.5 hover:bg-slate-100"
+          >
+            <span>Theme</span>
+            <span className="text-slate-500 capitalize">{theme}</span>
+          </button>
           <button
             type="button"
             onClick={onLogout}
