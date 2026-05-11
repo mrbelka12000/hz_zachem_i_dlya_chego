@@ -135,8 +135,17 @@ jobs:
           docker build -f build/Dockerfile -t ghcr.io/$OWNER/hz_zachem .
 
       - name: Docker push
+        id: push
         run: |
+          set -euo pipefail
           docker push ghcr.io/$OWNER/hz_zachem
+          # Capture the immutable digest reference (image@sha256:...) so
+          # the swarm update below targets a new ref every deploy.
+          # Without this, `service update --image :tag` keeps the same
+          # string and the daemon's cached digest, so nothing repulls.
+          DIGEST_REF=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/$OWNER/hz_zachem)
+          echo "image=$DIGEST_REF" >> "$GITHUB_OUTPUT"
+          echo "Resolved image: $DIGEST_REF"
 
       - name: Setup SSH
         run: |
@@ -148,5 +157,11 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} "docker service update --image ghcr.io/mrbelka12000/hz_zachem finance_service"
+          # --with-registry-auth forwards the manager's GHCR credentials
+          # to worker nodes so private-registry pulls succeed.
+          # --force ensures a task restart even if Swarm thinks nothing
+          # else changed (belt and braces; the digest pin already
+          # guarantees a new image ref).
+          ssh -o StrictHostKeyChecking=no ${{ secrets.USER_IP }} \
+            "docker service update --with-registry-auth --force --image '${{ steps.push.outputs.image }}' finance_service"
           
