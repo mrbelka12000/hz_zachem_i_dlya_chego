@@ -19,6 +19,7 @@ type TransactionService struct {
 	households *HouseholdService
 	accounts   *AccountService
 	rules      *RuleService
+	budgets    *BudgetService
 }
 
 type CreateTransactionInput struct {
@@ -127,6 +128,9 @@ func (s *TransactionService) Create(ctx context.Context, in CreateTransactionInp
 			return nil, ErrConflict
 		}
 		return nil, err
+	}
+	if s.budgets != nil {
+		s.budgets.OnTransactionCreated(ctx, t)
 	}
 	return t, nil
 }

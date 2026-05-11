@@ -20,6 +20,8 @@ import { CategoriesList } from './pages/Categories/List'
 import { NewCategory } from './pages/Categories/New'
 import { EditCategory } from './pages/Categories/Edit'
 import { RulesList } from './pages/Rules/List'
+import { BudgetsList } from './pages/Budgets/List'
+import { Settings } from './pages/Settings'
 import { CsvImport } from './pages/Imports/CsvImport'
 
 function Protected({ children }: { children: ReactNode }) {
@@ -146,6 +148,22 @@ export default function App() {
             element={
               <Protected>
                 <RulesList />
+              </Protected>
+            }
+          />
+          <Route
+            path="/budgets"
+            element={
+              <Protected>
+                <BudgetsList />
+              </Protected>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <Protected>
+                <Settings />
               </Protected>
             }
           />

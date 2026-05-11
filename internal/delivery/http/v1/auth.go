@@ -83,8 +83,9 @@ func (r *Router) logout(c *gin.Context) {
 }
 
 type meResponse struct {
-	UserID       string   `json:"user_id"`
-	HouseholdIDs []string `json:"household_ids"`
+	UserID         string   `json:"user_id"`
+	HouseholdIDs   []string `json:"household_ids"`
+	TelegramUserID *int64   `json:"telegram_user_id,omitempty"`
 }
 
 func (r *Router) me(c *gin.Context) {
@@ -94,9 +95,32 @@ func (r *Router) me(c *gin.Context) {
 		middleware.Respond(c, err)
 		return
 	}
+	user, err := r.svc.Auth.Me(c.Request.Context(), uid)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
 	ids := make([]string, 0, len(households))
 	for _, h := range households {
 		ids = append(ids, h.ID.String())
 	}
-	ok(c, meResponse{UserID: uid.String(), HouseholdIDs: ids})
+	ok(c, meResponse{UserID: uid.String(), HouseholdIDs: ids, TelegramUserID: user.TelegramUserID})
+}
+
+type telegramChatRequest struct {
+	ChatID *int64 `json:"chat_id"`
+}
+
+func (r *Router) setTelegram(c *gin.Context) {
+	var req telegramChatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.Respond(c, service.ErrInvalidInput)
+		return
+	}
+	uid := middleware.MustUserID(c)
+	if err := r.svc.Auth.SetTelegramChatID(c.Request.Context(), uid, req.ChatID); err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	noContent(c)
 }

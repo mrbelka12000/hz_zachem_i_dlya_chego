@@ -129,6 +129,32 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	return s.repo.Users.RevokeRefreshToken(ctx, stored.ID)
 }
 
+// SetTelegramChatID updates the user's Telegram chat ID (the integer
+// the bot uses to send DMs). Pass nil to unlink. Used by the Settings
+// page so the budget notifier knows where to deliver alerts.
+func (s *AuthService) SetTelegramChatID(ctx context.Context, userID models.ID, chatID *int64) error {
+	if err := s.repo.Users.UpdateTelegramUserID(ctx, userID, chatID); err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+// Me returns the user's identity blob (id + telegram link state) for
+// the Settings page.
+func (s *AuthService) Me(ctx context.Context, userID models.ID) (*models.User, error) {
+	u, err := s.repo.Users.GetByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return u, nil
+}
+
 func (s *AuthService) ParseAccess(token string) (*AccessClaims, error) {
 	return s.tokens.parseAccess(token)
 }

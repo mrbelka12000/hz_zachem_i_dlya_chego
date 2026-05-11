@@ -69,6 +69,7 @@ func (r *Router) mountAuthenticatedRoutes(api *gin.RouterGroup) {
 	protected := api.Group("")
 	protected.Use(middleware.Auth(r.svc))
 	protected.GET("/me", r.me)
+	protected.PATCH("/me/telegram", r.setTelegram)
 }
 
 func (r *Router) mountScopedRoutes(api *gin.RouterGroup) {
@@ -97,6 +98,13 @@ func (r *Router) mountScopedRoutes(api *gin.RouterGroup) {
 	scoped.GET("/categorization-rules/:id", r.getRule)
 	scoped.PUT("/categorization-rules/:id", r.updateRule)
 	scoped.DELETE("/categorization-rules/:id", r.deleteRule)
+
+	scoped.GET("/budgets", r.listBudgets)
+	scoped.POST("/budgets", r.createBudget)
+	scoped.GET("/budgets/status", r.listBudgetStatuses)
+	scoped.GET("/budgets/:id", r.getBudget)
+	scoped.PUT("/budgets/:id", r.updateBudget)
+	scoped.DELETE("/budgets/:id", r.deleteBudget)
 
 	scoped.GET("/transactions", r.listTransactions)
 	scoped.POST("/transactions", r.createTransaction)

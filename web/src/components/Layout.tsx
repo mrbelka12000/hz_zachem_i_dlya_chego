@@ -15,7 +15,9 @@ const navItems = [
   { to: '/accounts', label: 'Accounts' },
   { to: '/categories', label: 'Categories' },
   { to: '/rules', label: 'Rules' },
+  { to: '/budgets', label: 'Budgets' },
   { to: '/imports', label: 'Import' },
+  { to: '/settings', label: 'Settings' },
 ] as const
 
 export function Layout({ children }: LayoutProps) {

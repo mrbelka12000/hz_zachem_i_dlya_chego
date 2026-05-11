@@ -16,6 +16,7 @@ import (
 
 	"github.com/mrbelka12000/hz_zachem/internal/config"
 	v1 "github.com/mrbelka12000/hz_zachem/internal/delivery/http/v1"
+	"github.com/mrbelka12000/hz_zachem/internal/integrations/telegram"
 	"github.com/mrbelka12000/hz_zachem/internal/producer"
 	"github.com/mrbelka12000/hz_zachem/internal/repo"
 	"github.com/mrbelka12000/hz_zachem/internal/service"
@@ -66,8 +67,13 @@ func Run() {
 		log.Println("rabbitmq disabled (RABBITMQ_URL not set)")
 	}
 
+	tg := telegram.New(cfg.Telegram.BotToken)
+	if !tg.Enabled() {
+		log.Println("telegram: bot token not set — budget alerts will log only")
+	}
+
 	repository := repo.New(db)
-	svc := service.New(cfg.Auth, repository)
+	svc := service.New(cfg.Auth, repository, tg)
 	if rmq != nil {
 		_ = producer.New(rmq, cfg.RabbitMQ.Queue)
 	}

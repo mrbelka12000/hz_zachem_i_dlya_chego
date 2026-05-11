@@ -94,6 +94,13 @@ linters:
           - dupl
           - goconst
         path: internal/repo/
+      # Per-resource HTTP handlers (one file per resource) follow the
+      # same shape — bind request -> service call -> respond. They
+      # legitimately read similar because each binds/responds different
+      # types; sharing the boilerplate would obscure routing.
+      - linters:
+          - dupl
+        path: internal/delivery/http/v1/
     paths:
       - third_party$
       - builtin$

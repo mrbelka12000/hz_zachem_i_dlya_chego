@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/mrbelka12000/hz_zachem/internal/config"
+	"github.com/mrbelka12000/hz_zachem/internal/integrations/telegram"
 	"github.com/mrbelka12000/hz_zachem/internal/repo"
 )
 
@@ -18,9 +19,10 @@ type Service struct {
 	Analytics    *AnalyticsService
 	Imports      *ImportService
 	Rules        *RuleService
+	Budgets      *BudgetService
 }
 
-func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
+func New(cfg config.AuthConfig, repository *repo.Repository, tg *telegram.Client) *Service {
 	tokens := newTokenIssuer(cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL)
 
 	households := &HouseholdService{repo: repository}
@@ -28,7 +30,8 @@ func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
 	accounts := &AccountService{repo: repository, households: households}
 	categories := &CategoryService{repo: repository}
 	rules := &RuleService{repo: repository}
-	transactions := &TransactionService{repo: repository, households: households, accounts: accounts, rules: rules}
+	budgets := &BudgetService{repo: repository, households: households, telegram: tg}
+	transactions := &TransactionService{repo: repository, households: households, accounts: accounts, rules: rules, budgets: budgets}
 	analytics := &AnalyticsService{repo: repository, households: households}
 	imports := &ImportService{repo: repository, accounts: accounts, transactions: transactions}
 
@@ -44,6 +47,7 @@ func New(cfg config.AuthConfig, repository *repo.Repository) *Service {
 		Analytics:    analytics,
 		Imports:      imports,
 		Rules:        rules,
+		Budgets:      budgets,
 	}
 }
 

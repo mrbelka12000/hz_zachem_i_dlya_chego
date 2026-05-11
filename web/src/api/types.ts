@@ -96,6 +96,7 @@ export interface Household {
 export interface MeResponse {
   user_id: ID
   household_ids: ID[]
+  telegram_user_id?: number | null
 }
 
 export interface AuthResponse {

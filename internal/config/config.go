@@ -20,6 +20,14 @@ type Config struct {
 	Auth     AuthConfig     `yaml:"auth"     env:", prefix=AUTH_"`
 	CORS     CORSConfig     `yaml:"cors"     env:", prefix=CORS_"`
 	CSRF     CSRFConfig     `yaml:"csrf"     env:", prefix=CSRF_"`
+	Telegram TelegramConfig `yaml:"telegram" env:", prefix=TELEGRAM_"`
+}
+
+// TelegramConfig is optional. When BotToken is empty, the notifier
+// logs messages to stderr instead of calling the Bot API — this lets
+// the budget feature ship without a real bot wired up.
+type TelegramConfig struct {
+	BotToken string `yaml:"bot_token" env:"BOT_TOKEN"`
 }
 
 type HTTPConfig struct {
