@@ -1,5 +1,5 @@
 import { apiFetch } from './client'
-import type { Account, AccountType, Money } from './types'
+import type { Account, AccountStatus, AccountType, ID, Money } from './types'
 
 export interface AccountPayload {
   name: string
@@ -17,6 +17,18 @@ export interface AccountBalance {
   currency: string
 }
 
+export interface AccountBalanceRow {
+  account_id: ID
+  name: string
+  currency: string
+  status: AccountStatus
+  balance: Money
+}
+
+interface BalancesEnvelope {
+  rows: AccountBalanceRow[]
+}
+
 export const accountsApi = {
   list: (includeArchived = false) =>
     apiFetch<ListAccountsResponse>('GET', '/v1/accounts', {
@@ -27,6 +39,11 @@ export const accountsApi = {
 
   balance: (id: string) =>
     apiFetch<AccountBalance>('GET', `/v1/accounts/${id}/balance`),
+
+  balances: (includeArchived = false) =>
+    apiFetch<BalancesEnvelope>('GET', '/v1/accounts/balances', {
+      query: { archived: includeArchived ? 'true' : '' },
+    }).then((r) => r.rows),
 
   create: (payload: AccountPayload) =>
     apiFetch<Account>('POST', '/v1/accounts', { body: payload }),

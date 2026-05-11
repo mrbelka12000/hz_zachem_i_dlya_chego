@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Decimal from 'decimal.js'
 
+import { accountsApi, type AccountBalanceRow } from '../api/accounts'
 import { analyticsApi } from '../api/analytics'
 import { transactionsApi } from '../api/transactions'
 import type {
@@ -46,7 +47,19 @@ export function Dashboard() {
     queryFn: () => transactionsApi.list({ limit: 10 }),
   })
 
+  const balances = useQuery<AccountBalanceRow[]>({
+    queryKey: ['accounts', 'balances', { archived: true }],
+    queryFn: () => accountsApi.balances(true),
+  })
+
   const rates = useRates()
+
+  const totalBalance = sumToKZT(
+    balances.data ?? [],
+    (r) => r.balance,
+    (r) => r.currency,
+    rates,
+  )
 
   // All aggregations are converted to KZT before being summed/grouped.
   // Backend returns one row per (group, currency); the SPA folds them
@@ -105,6 +118,41 @@ export function Dashboard() {
           Add transaction
         </Link>
       </header>
+
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1">
+          <Kpi
+            label="Total balance"
+            value={formatMoney(totalBalance.toString())}
+            accent={balanceAccent(totalBalance)}
+            loading={balances.isPending}
+            subtle={
+              balances.data && balances.data.length > 0
+                ? `${balances.data.length} account${balances.data.length === 1 ? '' : 's'} · KZT-equivalent`
+                : undefined
+            }
+          />
+        </div>
+        <Card
+          title="Accounts"
+          className="lg:col-span-2"
+          actions={
+            <Link to="/accounts" className="text-xs text-slate-500 hover:underline">
+              Manage
+            </Link>
+          }
+        >
+          {balances.isError && (
+            <ErrorText>{(balances.error as Error).message}</ErrorText>
+          )}
+          {balances.data && balances.data.length === 0 && (
+            <Empty>No accounts yet — create one to start tracking.</Empty>
+          )}
+          {balances.data && balances.data.length > 0 && (
+            <AccountBalances rows={balances.data} />
+          )}
+        </Card>
+      </section>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Kpi
@@ -222,14 +270,21 @@ export function Dashboard() {
 function Card({
   title,
   actions,
+  className,
   children,
 }: {
   title: string
   actions?: React.ReactNode
+  className?: string
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+    <div
+      className={
+        'bg-white rounded-2xl border border-slate-200 p-5 shadow-sm ' +
+        (className ?? '')
+      }
+    >
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-slate-700">{title}</h2>
         {actions}
@@ -454,4 +509,44 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 function ErrorText({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-red-600">{children}</p>
+}
+
+function balanceAccent(total: Decimal): string {
+  if (total.isNegative()) return 'text-red-600'
+  if (total.isZero()) return 'text-slate-700'
+  return 'text-slate-900'
+}
+
+function AccountBalances({ rows }: { rows: AccountBalanceRow[] }) {
+  return (
+    <ul className="divide-y divide-slate-100">
+      {rows.map((a) => {
+        const archived = a.status === 'archived'
+        return (
+          <li
+            key={a.account_id}
+            className="py-2 flex items-center justify-between text-sm"
+          >
+            <Link
+              to={`/accounts/${a.account_id}`}
+              className="flex items-center gap-2 min-w-0 hover:underline"
+            >
+              <span className="truncate text-slate-800">{a.name}</span>
+              {archived && (
+                <span className="rounded-full bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5">
+                  archived
+                </span>
+              )}
+            </Link>
+            <span className="text-right whitespace-nowrap">
+              <span className="font-medium tabular-nums text-slate-800">
+                {formatMoney(a.balance, a.currency)}
+              </span>
+              <ConvertedHint amount={a.balance} currency={a.currency} inline />
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )
 }

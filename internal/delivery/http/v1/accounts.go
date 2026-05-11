@@ -19,7 +19,7 @@ type accountRequest struct {
 
 func (r *Router) listAccounts(c *gin.Context) {
 	hid := middleware.MustHouseholdID(c)
-	includeArchived := c.Query("archived") == "true"
+	includeArchived := queryBool(c, "archived")
 	accounts, err := r.svc.Accounts.List(c.Request.Context(), hid, includeArchived)
 	if err != nil {
 		middleware.Respond(c, err)
@@ -91,6 +91,17 @@ func (r *Router) updateAccount(c *gin.Context) {
 		return
 	}
 	ok(c, a)
+}
+
+func (r *Router) listAccountBalances(c *gin.Context) {
+	hid := middleware.MustHouseholdID(c)
+	includeArchived := queryBool(c, "archived")
+	rows, err := r.svc.Accounts.Balances(c.Request.Context(), hid, includeArchived)
+	if err != nil {
+		middleware.Respond(c, err)
+		return
+	}
+	okRows(c, rows)
 }
 
 func (r *Router) getAccountBalance(c *gin.Context) {

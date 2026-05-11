@@ -81,6 +81,10 @@ func (s *AccountService) List(ctx context.Context, householdID models.ID, includ
 	return s.repo.Accounts.List(ctx, householdID, includeArchived)
 }
 
+func (s *AccountService) Balances(ctx context.Context, householdID models.ID, includeArchived bool) ([]repo.AccountBalanceRow, error) {
+	return s.repo.Accounts.Balances(ctx, householdID, includeArchived)
+}
+
 func (s *AccountService) Balance(ctx context.Context, householdID, id models.ID) (models.Money, error) {
 	balance, err := s.repo.Accounts.Balance(ctx, householdID, id)
 	if err != nil {

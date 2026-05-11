@@ -147,7 +147,7 @@ func buildListTransactionsInput(c *gin.Context, hid models.ID) (service.ListTran
 		t := models.TransactionType(v)
 		in.Type = &t
 	}
-	in.UncategorizedOnly = c.Query("uncategorized") == "true"
+	in.UncategorizedOnly = queryBool(c, "uncategorized")
 	in.Search = strings.TrimSpace(c.Query("q"))
 	if in.AmountMin, err = queryDecimal(c, "amount_min"); err != nil {
 		return in, err
@@ -213,6 +213,13 @@ func queryPositiveInt(c *gin.Context, key string) (int, error) {
 		return 0, service.ErrInvalidInput
 	}
 	return n, nil
+}
+
+// queryBool treats only the literal "true" as true; anything else
+// (including "1", "yes", empty) is false. Matches the SPA's
+// `flag ? 'true' : ''` convention in api/client.ts.
+func queryBool(c *gin.Context, key string) bool {
+	return c.Query(key) == "true"
 }
 
 func (r *Router) getTransaction(c *gin.Context) {
