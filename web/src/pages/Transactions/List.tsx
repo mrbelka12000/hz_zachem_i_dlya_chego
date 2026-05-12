@@ -135,9 +135,9 @@ export function TransactionsList() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Transactions</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => pair.mutate()}
@@ -229,7 +229,81 @@ export function TransactionsList() {
         </div>
       </section>
 
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Mobile card list (below md) — card-per-row layout that
+        survives 375px width without horizontal scroll. The wide table
+        below stays available on md+. */}
+      <section className="md:hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <ul className="divide-y divide-slate-100">
+          {list.isPending && (
+            <li className="px-4 py-6 text-center text-sm text-slate-500">
+              Loading…
+            </li>
+          )}
+          {!list.isPending && rows.length === 0 && (
+            <li className="px-4 py-6 text-center text-sm text-slate-500">
+              No transactions match these filters.
+            </li>
+          )}
+          {rows.map((t) => {
+            const account = accountById.get(t.account_id)
+            const category = t.category_id ? categoryById.get(t.category_id) : null
+            return (
+              <li
+                key={t.id}
+                onClick={() => navigate(`/transactions/${t.id}`)}
+                className="cursor-pointer hover:bg-slate-50 px-4 py-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-slate-800 truncate">
+                      {t.description || t.merchant || '(unnamed)'}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                      {formatDate(t.occurred_at)}
+                      {' · '}
+                      {account?.name ?? '—'}
+                      {' · '}
+                      {category?.name ?? 'Uncategorized'}
+                    </p>
+                  </div>
+                  <div className="text-right whitespace-nowrap">
+                    <p
+                      className={
+                        'text-sm font-medium tabular-nums ' + amountClassName(t)
+                      }
+                    >
+                      {amountPrefix(t)}
+                      {formatMoney(t.amount, t.currency)}
+                    </p>
+                    <ConvertedHint amount={t.amount} currency={t.currency} />
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+
+        <div className="flex items-center justify-between gap-2 p-3 border-t border-slate-100 text-sm">
+          <button
+            type="button"
+            onClick={resetCursor}
+            disabled={onFirstPage}
+            className="flex-1 rounded-md border border-slate-300 px-3 py-2 disabled:opacity-50 hover:bg-slate-50"
+          >
+            ← First
+          </button>
+          <button
+            type="button"
+            onClick={nextPage}
+            disabled={!hasMore}
+            className="flex-1 rounded-md border border-slate-300 px-3 py-2 disabled:opacity-50 hover:bg-slate-50"
+          >
+            Next →
+          </button>
+        </div>
+      </section>
+
+      <section className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left">
             <tr>

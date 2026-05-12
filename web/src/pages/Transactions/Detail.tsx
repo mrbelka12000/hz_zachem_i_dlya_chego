@@ -60,9 +60,9 @@ export function TransactionDetail() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Transaction</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => navigate(-1)}

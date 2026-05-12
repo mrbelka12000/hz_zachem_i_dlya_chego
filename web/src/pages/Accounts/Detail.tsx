@@ -88,7 +88,7 @@ export function AccountDetail() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{account.name}</h1>
           <p className="text-xs uppercase tracking-wide text-slate-500 mt-1">

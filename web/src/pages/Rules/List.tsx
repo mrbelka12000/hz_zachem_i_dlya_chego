@@ -129,7 +129,7 @@ export function RulesList() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Categorization rules</h1>
         <button
           type="button"
