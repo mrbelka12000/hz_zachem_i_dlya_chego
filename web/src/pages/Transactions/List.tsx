@@ -253,9 +253,11 @@ export function TransactionsList() {
         )}
         {groupedRows.map((group) => (
           <div key={group.dayKey}>
-            <div className="px-4 py-2 bg-slate-50 border-y border-slate-100 flex items-center justify-between text-xs">
-              <span className="font-medium text-slate-600">{group.label}</span>
-              <span className="text-slate-400 tabular-nums">
+            <div className="sticky top-12 z-10 px-4 py-2.5 bg-slate-100 border-y-2 border-slate-200 flex items-center justify-between shadow-sm">
+              <span className="text-sm font-semibold text-slate-800 uppercase tracking-wide">
+                {group.label}
+              </span>
+              <span className="text-xs font-medium text-slate-600 bg-white rounded-full px-2 py-0.5 tabular-nums">
                 {group.items.length}
               </span>
             </div>
@@ -350,13 +352,13 @@ export function TransactionsList() {
             )}
             {groupedRows.map((group) => (
               <React.Fragment key={group.dayKey}>
-                <tr className="bg-slate-50/80">
-                  <td colSpan={5} className="px-4 py-1.5 text-xs">
+                <tr className="bg-slate-100 border-y-2 border-slate-200">
+                  <td colSpan={5} className="px-4 py-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-600">
+                      <span className="text-sm font-semibold text-slate-800 uppercase tracking-wide">
                         {group.label}
                       </span>
-                      <span className="text-slate-400 tabular-nums">
+                      <span className="text-xs font-medium text-slate-600 bg-white rounded-full px-2 py-0.5 tabular-nums">
                         {group.items.length}
                       </span>
                     </div>
