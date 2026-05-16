@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -9,13 +9,19 @@ import type {
   Account,
   Category,
   ID,
+  Transaction,
   TransactionType,
   TransactionsListResponse,
 } from '../../api/types'
 import { ConvertedHint } from '../../components/ConvertedHint'
-import { formatDate } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { amountClassName, amountPrefix } from '../../lib/transactions'
+
+interface DayGroup {
+  dayKey: string
+  label: string
+  items: Transaction[]
+}
 
 interface FilterState {
   type: TransactionType | ''
@@ -119,6 +125,11 @@ export function TransactionsList() {
   const rows = list.data?.transactions ?? []
   const hasMore = Boolean(list.data?.next_cursor)
   const onFirstPage = !filters.cursor_id
+
+  // Transactions arrive sorted by occurred_at DESC, so a single linear
+  // pass produces day-groups in DESC order. Recompute when the page
+  // of rows changes.
+  const groupedRows = useMemo<DayGroup[]>(() => groupByDay(rows), [rows])
 
   const pair = useMutation({
     mutationFn: () => transactionsApi.pairTransfers(),
@@ -229,59 +240,67 @@ export function TransactionsList() {
         </div>
       </section>
 
-      {/* Mobile card list (below md) — card-per-row layout that
-        survives 375px width without horizontal scroll. The wide table
+      {/* Mobile card list (below md) — grouped by day. The wide table
         below stays available on md+. */}
       <section className="md:hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <ul className="divide-y divide-slate-100">
-          {list.isPending && (
-            <li className="px-4 py-6 text-center text-sm text-slate-500">
-              Loading…
-            </li>
-          )}
-          {!list.isPending && rows.length === 0 && (
-            <li className="px-4 py-6 text-center text-sm text-slate-500">
-              No transactions match these filters.
-            </li>
-          )}
-          {rows.map((t) => {
-            const account = accountById.get(t.account_id)
-            const category = t.category_id ? categoryById.get(t.category_id) : null
-            return (
-              <li
-                key={t.id}
-                onClick={() => navigate(`/transactions/${t.id}`)}
-                className="cursor-pointer hover:bg-slate-50 px-4 py-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-slate-800 truncate">
-                      {t.description || t.merchant || '(unnamed)'}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5 truncate">
-                      {formatDate(t.occurred_at)}
-                      {' · '}
-                      {account?.name ?? '—'}
-                      {' · '}
-                      {category?.name ?? 'Uncategorized'}
-                    </p>
-                  </div>
-                  <div className="text-right whitespace-nowrap">
-                    <p
-                      className={
-                        'text-sm font-medium tabular-nums ' + amountClassName(t)
-                      }
-                    >
-                      {amountPrefix(t)}
-                      {formatMoney(t.amount, t.currency)}
-                    </p>
-                    <ConvertedHint amount={t.amount} currency={t.currency} />
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+        {list.isPending && (
+          <p className="px-4 py-6 text-center text-sm text-slate-500">Loading…</p>
+        )}
+        {!list.isPending && rows.length === 0 && (
+          <p className="px-4 py-6 text-center text-sm text-slate-500">
+            No transactions match these filters.
+          </p>
+        )}
+        {groupedRows.map((group) => (
+          <div key={group.dayKey}>
+            <div className="px-4 py-2 bg-slate-50 border-y border-slate-100 flex items-center justify-between text-xs">
+              <span className="font-medium text-slate-600">{group.label}</span>
+              <span className="text-slate-400 tabular-nums">
+                {group.items.length}
+              </span>
+            </div>
+            <ul className="divide-y divide-slate-100">
+              {group.items.map((t) => {
+                const account = accountById.get(t.account_id)
+                const category = t.category_id
+                  ? categoryById.get(t.category_id)
+                  : null
+                return (
+                  <li
+                    key={t.id}
+                    onClick={() => navigate(`/transactions/${t.id}`)}
+                    className="cursor-pointer hover:bg-slate-50 px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-slate-800 truncate">
+                          {t.description || t.merchant || '(unnamed)'}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">
+                          {account?.name ?? '—'}
+                          {' · '}
+                          {category?.name ?? 'Uncategorized'}
+                        </p>
+                      </div>
+                      <div className="text-right whitespace-nowrap">
+                        <p
+                          className={
+                            'text-sm font-medium tabular-nums ' +
+                            amountClassName(t)
+                          }
+                        >
+                          {amountPrefix(t)}
+                          {formatMoney(t.amount, t.currency)}
+                        </p>
+                        <ConvertedHint amount={t.amount} currency={t.currency} />
+                      </div>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
 
         <div className="flex items-center justify-between gap-2 p-3 border-t border-slate-100 text-sm">
           <button
@@ -307,7 +326,6 @@ export function TransactionsList() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left">
             <tr>
-              <th className="px-4 py-2 font-medium">Date</th>
               <th className="px-4 py-2 font-medium">Description</th>
               <th className="px-4 py-2 font-medium">Account</th>
               <th className="px-4 py-2 font-medium">Category</th>
@@ -318,74 +336,96 @@ export function TransactionsList() {
           <tbody className="divide-y divide-slate-100">
             {list.isPending && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
                   Loading…
                 </td>
               </tr>
             )}
             {!list.isPending && rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
                   No transactions match these filters.
                 </td>
               </tr>
             )}
-            {rows.map((t) => {
-              const account = accountById.get(t.account_id)
-              const category = t.category_id ? categoryById.get(t.category_id) : null
-              return (
-                <tr
-                  key={t.id}
-                  onClick={() => navigate(`/transactions/${t.id}`)}
-                  className="cursor-pointer hover:bg-slate-50"
-                >
-                  <td className="px-4 py-2 whitespace-nowrap text-slate-600">
-                    {formatDate(t.occurred_at)}
-                  </td>
-                  <td className="px-4 py-2 min-w-0">
-                    <div className="flex flex-col">
-                      <span className="text-slate-800">
-                        {t.description || t.merchant || '(unnamed)'}
+            {groupedRows.map((group) => (
+              <React.Fragment key={group.dayKey}>
+                <tr className="bg-slate-50/80">
+                  <td colSpan={5} className="px-4 py-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-slate-600">
+                        {group.label}
                       </span>
-                      <span className="text-xs text-slate-500">{t.type}</span>
+                      <span className="text-slate-400 tabular-nums">
+                        {group.items.length}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-slate-600">{account?.name ?? '—'}</td>
-                  <td className="px-4 py-2 text-slate-600">
-                    {category?.name ?? <span className="text-slate-400">—</span>}
-                  </td>
-                  <td
-                    className={
-                      'px-4 py-2 text-right font-medium tabular-nums ' +
-                      amountClassName(t)
-                    }
-                  >
-                    {amountPrefix(t)}
-                    {formatMoney(t.amount, t.currency)}
-                    <ConvertedHint amount={t.amount} currency={t.currency} />
-                  </td>
-                  <td className="px-4 py-2 text-right whitespace-nowrap">
-                    <Link
-                      to={`/transactions/${t.id}/edit`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-slate-600 hover:underline mr-3"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete(t.id)
-                      }}
-                      className="text-xs text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
                 </tr>
-              )
-            })}
+                {group.items.map((t) => {
+                  const account = accountById.get(t.account_id)
+                  const category = t.category_id
+                    ? categoryById.get(t.category_id)
+                    : null
+                  return (
+                    <tr
+                      key={t.id}
+                      onClick={() => navigate(`/transactions/${t.id}`)}
+                      className="cursor-pointer hover:bg-slate-50"
+                    >
+                      <td className="px-4 py-2 min-w-0">
+                        <div className="flex flex-col">
+                          <span className="text-slate-800">
+                            {t.description || t.merchant || '(unnamed)'}
+                          </span>
+                          <span className="text-xs text-slate-500">{t.type}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-slate-600">
+                        {account?.name ?? '—'}
+                      </td>
+                      <td className="px-4 py-2 text-slate-600">
+                        {category?.name ?? (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td
+                        className={
+                          'px-4 py-2 text-right font-medium tabular-nums ' +
+                          amountClassName(t)
+                        }
+                      >
+                        {amountPrefix(t)}
+                        {formatMoney(t.amount, t.currency)}
+                        <ConvertedHint
+                          amount={t.amount}
+                          currency={t.currency}
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-right whitespace-nowrap">
+                        <Link
+                          to={`/transactions/${t.id}/edit`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-slate-600 hover:underline mr-3"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDelete(t.id)
+                          }}
+                          className="text-xs text-red-600 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </React.Fragment>
+            ))}
           </tbody>
         </table>
 
@@ -419,4 +459,47 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   )
+}
+
+// Local-date YYYY-MM-DD key for grouping. We deliberately use the
+// user's local timezone — a transaction that occurred at 23:50 in
+// the user's wallclock belongs to that calendar day, even if UTC
+// rolled over already.
+function dayKey(iso: string): string {
+  const d = new Date(iso)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function dayLabel(key: string): string {
+  const today = dayKey(new Date().toISOString())
+  if (key === today) return 'Today'
+  const yesterday = dayKey(new Date(Date.now() - 86_400_000).toISOString())
+  if (key === yesterday) return 'Yesterday'
+  // Build a date at local midnight from the YYYY-MM-DD key so
+  // toLocaleDateString uses the right day in every timezone.
+  const [y, m, d] = key.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function groupByDay(rows: readonly Transaction[]): DayGroup[] {
+  const groups: DayGroup[] = []
+  let current: DayGroup | null = null
+  for (const t of rows) {
+    const key = dayKey(t.occurred_at)
+    if (!current || current.dayKey !== key) {
+      current = { dayKey: key, label: dayLabel(key), items: [] }
+      groups.push(current)
+    }
+    current.items.push(t)
+  }
+  return groups
 }
