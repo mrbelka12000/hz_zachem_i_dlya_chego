@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -38,14 +38,22 @@ const PAGE_SIZE = 25
 export function TransactionsList() {
   const qc = useQueryClient()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const [filters, setFilters] = useState<FilterState>(() => ({
-    type: '',
-    account_id: (searchParams.get('account_id') ?? '') as ID | '',
-    category_id: (searchParams.get('category_id') ?? '') as ID | '',
-    q: '',
-    uncategorized: searchParams.get('uncategorized') === 'true',
-  }))
+  // URL = single source of truth for filters + pagination cursor.
+  // Back/forward, refresh, and bookmarks all just work because the
+  // page derives state from searchParams every render.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filters = useMemo<FilterState>(
+    () => ({
+      type: (searchParams.get('type') ?? '') as TransactionType | '',
+      account_id: (searchParams.get('account_id') ?? '') as ID | '',
+      category_id: (searchParams.get('category_id') ?? '') as ID | '',
+      q: searchParams.get('q') ?? '',
+      uncategorized: searchParams.get('uncategorized') === 'true',
+      cursor_id: (searchParams.get('cursor_id') ?? undefined) as ID | undefined,
+      cursor_at: searchParams.get('cursor_at') ?? undefined,
+    }),
+    [searchParams],
+  )
 
   const accounts = useQuery<Account[]>({
     queryKey: ['accounts'],
@@ -93,26 +101,50 @@ export function TransactionsList() {
     },
   })
 
+  // Filter-change keys that should _replace_ the current history entry
+  // instead of pushing a new one. Typing in the search box would
+  // otherwise create one history entry per keystroke and make Back
+  // useless — replace lets a whole word feel like a single step.
+  const REPLACE_KEYS: ReadonlyArray<keyof FilterState> = ['q']
+
   function update<K extends keyof FilterState>(key: K, value: FilterState[K]) {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value,
-      cursor_id: undefined,
-      cursor_at: undefined,
-    }))
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        const stringified =
+          typeof value === 'boolean' ? (value ? 'true' : '') : (value ?? '').toString()
+        if (!stringified) {
+          next.delete(key)
+        } else {
+          next.set(key, stringified)
+        }
+        // Any filter change resets pagination — keep the URL consistent.
+        next.delete('cursor_id')
+        next.delete('cursor_at')
+        return next
+      },
+      { replace: REPLACE_KEYS.includes(key) },
+    )
   }
 
   function nextPage() {
-    if (!list.data?.next_cursor) return
-    setFilters((prev) => ({
-      ...prev,
-      cursor_id: list.data!.next_cursor!.id,
-      cursor_at: list.data!.next_cursor!.occurred_at,
-    }))
+    const cursor = list.data?.next_cursor
+    if (!cursor) return
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('cursor_id', cursor.id)
+      next.set('cursor_at', cursor.occurred_at)
+      return next
+    })
   }
 
   function resetCursor() {
-    setFilters((prev) => ({ ...prev, cursor_id: undefined, cursor_at: undefined }))
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('cursor_id')
+      next.delete('cursor_at')
+      return next
+    })
   }
 
   async function onDelete(id: ID) {
