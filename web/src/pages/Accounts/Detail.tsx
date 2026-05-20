@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Decimal from 'decimal.js'
@@ -15,10 +15,15 @@ import type {
   TransactionsListResponse,
 } from '../../api/types'
 import { ConvertedHint } from '../../components/ConvertedHint'
-import { formatDate, formatMonth } from '../../lib/dates'
+import { formatMonth } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { toKZT, useRates } from '../../lib/rates'
-import { amountClassName, amountPrefix } from '../../lib/transactions'
+import {
+  amountClassName,
+  amountPrefix,
+  groupTransactionsByDay,
+  type DayGroup,
+} from '../../lib/transactions'
 
 const RECENT_LIMIT = 15
 const CASHFLOW_MONTHS = 6
@@ -85,6 +90,12 @@ export function AccountDetail() {
   const account = accountQuery.data
   const archived = account.status === 'archived'
   const txRows = transactionsQuery.data?.transactions ?? []
+  // Group rows under day headers the same way the Transactions list
+  // does, so this page reads consistently with the global list.
+  const txGroups = useMemo<DayGroup[]>(
+    () => groupTransactionsByDay(txRows),
+    [txRows],
+  )
 
   return (
     <div className="space-y-5">
@@ -112,7 +123,7 @@ export function AccountDetail() {
         </div>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Kpi
           label="Current balance"
           value={
@@ -128,16 +139,6 @@ export function AccountDetail() {
                 currency={balanceQuery.data.currency}
               />
             ) : null
-          }
-        />
-        <Kpi
-          label="Initial balance"
-          value={formatMoney(account.initial_balance, account.currency)}
-          hint={
-            <ConvertedHint
-              amount={account.initial_balance}
-              currency={account.currency}
-            />
           }
         />
         <Kpi
@@ -189,7 +190,6 @@ export function AccountDetail() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-left">
             <tr>
-              <th className="px-4 py-2 font-medium">Date</th>
               <th className="px-4 py-2 font-medium">Description</th>
               <th className="px-4 py-2 font-medium">Category</th>
               <th className="px-4 py-2 font-medium text-right">Amount</th>
@@ -198,53 +198,73 @@ export function AccountDetail() {
           <tbody className="divide-y divide-slate-100">
             {transactionsQuery.isPending && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
                   Loading…
                 </td>
               </tr>
             )}
             {!transactionsQuery.isPending && txRows.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
                   No transactions on this account yet.
                 </td>
               </tr>
             )}
-            {txRows.map((t) => {
-              const category = t.category_id ? categoryById.get(t.category_id) : null
-              return (
-                <tr
-                  key={t.id}
-                  onClick={() => navigate(`/transactions/${t.id}`)}
-                  className="cursor-pointer hover:bg-slate-50"
-                >
-                  <td className="px-4 py-2 whitespace-nowrap text-slate-600">
-                    {formatDate(t.occurred_at)}
-                  </td>
-                  <td className="px-4 py-2 min-w-0">
-                    <div className="flex flex-col">
-                      <span className="text-slate-800">
-                        {t.description || t.merchant || '(unnamed)'}
+            {txGroups.map((group) => (
+              <React.Fragment key={group.dayKey}>
+                <tr className="bg-slate-100 border-y-2 border-slate-200">
+                  <td colSpan={3} className="px-4 py-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-800 uppercase tracking-wide">
+                        {group.label}
                       </span>
-                      <span className="text-xs text-slate-500">{t.type}</span>
+                      <span className="text-xs font-medium text-slate-600 bg-white rounded-full px-2 py-0.5 tabular-nums">
+                        {group.items.length}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-slate-600">
-                    {category?.name ?? <span className="text-slate-400">—</span>}
-                  </td>
-                  <td
-                    className={
-                      'px-4 py-2 text-right font-medium tabular-nums ' +
-                      amountClassName(t)
-                    }
-                  >
-                    {amountPrefix(t)}
-                    {formatMoney(t.amount, t.currency)}
-                    <ConvertedHint amount={t.amount} currency={t.currency} />
-                  </td>
                 </tr>
-              )
-            })}
+                {group.items.map((t) => {
+                  const category = t.category_id
+                    ? categoryById.get(t.category_id)
+                    : null
+                  return (
+                    <tr
+                      key={t.id}
+                      onClick={() => navigate(`/transactions/${t.id}`)}
+                      className="cursor-pointer hover:bg-slate-50"
+                    >
+                      <td className="px-4 py-2 min-w-0">
+                        <div className="flex flex-col">
+                          <span className="text-slate-800">
+                            {t.description || t.merchant || '(unnamed)'}
+                          </span>
+                          <span className="text-xs text-slate-500">{t.type}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-slate-600">
+                        {category?.name ?? (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td
+                        className={
+                          'px-4 py-2 text-right font-medium tabular-nums ' +
+                          amountClassName(t)
+                        }
+                      >
+                        {amountPrefix(t)}
+                        {formatMoney(t.amount, t.currency)}
+                        <ConvertedHint
+                          amount={t.amount}
+                          currency={t.currency}
+                        />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </React.Fragment>
+            ))}
           </tbody>
         </table>
       </section>
