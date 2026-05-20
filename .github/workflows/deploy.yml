@@ -128,22 +128,22 @@ jobs:
 
       - name: Docker login
         run: |
-          echo ${{ secrets.PASSWORD }} | docker login ghcr.io -u $OWNER --password-stdin
+          echo ${{ secrets.PASSWORD }} | docker login -u $OWNER --password-stdin
 
       - name: Docker build
         run: |
-          docker build -f build/Dockerfile -t ghcr.io/$OWNER/hz_zachem .
+          docker build -f build/Dockerfile -t $OWNER/hz_zachem .
 
       - name: Docker push
         id: push
         run: |
           set -euo pipefail
-          docker push ghcr.io/$OWNER/hz_zachem
+          docker push $OWNER/hz_zachem
           # Capture the immutable digest reference (image@sha256:...) so
           # the swarm update below targets a new ref every deploy.
           # Without this, `service update --image :tag` keeps the same
           # string and the daemon's cached digest, so nothing repulls.
-          DIGEST_REF=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/$OWNER/hz_zachem)
+          DIGEST_REF=$(docker inspect --format='{{index .RepoDigests 0}}' $OWNER/hz_zachem)
           echo "image=$DIGEST_REF" >> "$GITHUB_OUTPUT"
           echo "Resolved image: $DIGEST_REF"
 
