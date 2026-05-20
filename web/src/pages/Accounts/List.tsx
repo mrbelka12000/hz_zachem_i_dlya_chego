@@ -123,9 +123,6 @@ export function AccountsList() {
                         {balances.isPending ? '…' : '—'}
                       </p>
                     )}
-                    <p className="text-[11px] text-slate-500 tabular-nums">
-                      initial {formatMoney(a.initial_balance, a.currency)}
-                    </p>
                   </div>
                 </div>
               </li>
@@ -141,7 +138,6 @@ export function AccountsList() {
               <th className="px-4 py-2 font-medium">Name</th>
               <th className="px-4 py-2 font-medium">Type</th>
               <th className="px-4 py-2 font-medium">Currency</th>
-              <th className="px-4 py-2 font-medium text-right">Initial balance</th>
               <th className="px-4 py-2 font-medium text-right">Current balance</th>
               <th className="px-4 py-2 font-medium">Status</th>
               <th className="px-4 py-2" />
@@ -150,14 +146,14 @@ export function AccountsList() {
           <tbody className="divide-y divide-slate-100">
             {accounts.isPending && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
                   Loading…
                 </td>
               </tr>
             )}
             {!accounts.isPending && rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
                   No accounts yet — create one to start tracking.
                 </td>
               </tr>
@@ -176,10 +172,6 @@ export function AccountsList() {
                   <td className="px-4 py-2 text-slate-800">{a.name}</td>
                   <td className="px-4 py-2 text-slate-600 capitalize">{a.type}</td>
                   <td className="px-4 py-2 text-slate-600">{a.currency}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">
-                    {formatMoney(a.initial_balance, a.currency)}
-                    <ConvertedHint amount={a.initial_balance} currency={a.currency} />
-                  </td>
                   <td
                     className={
                       'px-4 py-2 text-right tabular-nums font-medium ' +
