@@ -75,6 +75,15 @@ export function AccountDetail() {
     [cashflowQuery.data, rates],
   )
 
+  // All hooks must run on every render (Rules of Hooks). txGroups
+  // depends on transactionsQuery.data only — independent from
+  // accountQuery's loading state below.
+  const txRows = transactionsQuery.data?.transactions ?? []
+  const txGroups = useMemo<DayGroup[]>(
+    () => groupTransactionsByDay(txRows),
+    [txRows],
+  )
+
   if (accountQuery.isPending) {
     return <p className="text-slate-500">Loading…</p>
   }
@@ -89,13 +98,6 @@ export function AccountDetail() {
 
   const account = accountQuery.data
   const archived = account.status === 'archived'
-  const txRows = transactionsQuery.data?.transactions ?? []
-  // Group rows under day headers the same way the Transactions list
-  // does, so this page reads consistently with the global list.
-  const txGroups = useMemo<DayGroup[]>(
-    () => groupTransactionsByDay(txRows),
-    [txRows],
-  )
 
   return (
     <div className="space-y-5">
